@@ -1,0 +1,22 @@
+{
+  "energy_definition": "mean(U_lid**2)",
+  "E_target": 0.25,
+  "N_MX": 6,
+  "N_MT": 5,
+  "LX": 1.0,
+  "LY": 1.0,
+  "Re_min": 100.0,
+  "Re_max": 1000.0,
+  "LAMBDA_PDE": 1.0,
+  "LAMBDA_BC": 15.0,
+  "LAMBDA_DISS": 0.05,
+  "LAMBDA_CTRL": 200.0,
+  "LAMBDA_VAR": 1.0,
+  "LAMBDA_RE": 2.0,
+  "N_PHYS": 4000,
+  "N_BC": 600,
+  "campaign": "mode_count",
+  "n_mx": 6,
+  "n_mt": 1,
+  "seed": 42
+}

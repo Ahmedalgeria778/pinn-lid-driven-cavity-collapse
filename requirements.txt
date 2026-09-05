@@ -1,0 +1,7 @@
+# Verified environment: Windows 11, Python 3.14.7, CPU
+# (install the CPU build of torch first, see INSTALL.md)
+numpy==2.5.2
+torch==2.13.0+cpu
+matplotlib==3.11.1
+pandas==3.0.5
+pysr==2.1.0
