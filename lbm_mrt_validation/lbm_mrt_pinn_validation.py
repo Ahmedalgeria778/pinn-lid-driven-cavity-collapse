@@ -573,7 +573,8 @@ if __name__ == '__main__':
     DARK = '#090909'
     PANEL = '#111111'
     C_RE = {100: '#00e5ff', 500: '#ff6b35', 1000: '#7dff6b'}
-    C_PR = {'uniform': '#cccccc', 'sin_pi': '#ffcc00', 'sin_2pi': '#00e5ff', 'pinn': '#ff6b35'}
+    C_PR = {'uniform': '#cccccc', 'sin_pi': '#ffcc00', 'sin_2pi': '#00e5ff', 'pinn': '#ff6b35',
+            'pinn_t': '#e040fb', 'cheb_t': '#40c4ff'}
     LS = {'uniform': '-', 'sin_pi': '--', 'sin_2pi': '-.', 'pinn': ':'}
 
 

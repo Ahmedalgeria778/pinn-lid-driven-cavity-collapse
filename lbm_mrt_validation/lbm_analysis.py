@@ -77,6 +77,13 @@ def parse_ghia_gci(log_path):
             for row in csv.DictReader(f):
                 if row["Re"] == "1000":
                     ghia[1000] = {"L2": float(row["L2"]), "Linf": float(row["Linf"])}
+    # Consolidated final-field metrics (Re=100 & 1000) supersede log parsing.
+    fcons = os.path.join(HERE, "ghia_validation_final.csv")
+    if os.path.exists(fcons):
+        with open(fcons, newline="") as f:
+            for row in csv.DictReader(f):
+                ghia[int(row["Re"])] = {"L2": float(row["L2_u"]), "Linf": float(row["Linf_u"]),
+                                        "L2_v": float(row["L2_v"]), "Linf_v": float(row["Linf_v"])}
     return ghia, gci
 
 
@@ -98,6 +105,9 @@ def main():
         for Re in ghia:
             w.writerow([f"ghia_L2_Re{Re}", ghia[Re]["L2"]])
             w.writerow([f"ghia_Linf_Re{Re}", ghia[Re]["Linf"]])
+            if "L2_v" in ghia[Re]:
+                w.writerow([f"ghia_L2_v_Re{Re}", ghia[Re]["L2_v"]])
+                w.writerow([f"ghia_Linf_v_Re{Re}", ghia[Re]["Linf_v"]])
         for k, v in gci.items():
             w.writerow([f"gci_{k}", v])
 
@@ -208,8 +218,11 @@ def main():
     ]
     if ghia:
         for Re in sorted(ghia):
-            lines.append(f"- Ghia (lid uniforme, N=256) : Re={Re} — L2={ghia[Re]['L2']:.4f}, "
-                         f"Linf={ghia[Re]['Linf']:.4f}")
+            line = f"- Ghia (lid uniforme, N=256) : Re={Re} — L2(u)={ghia[Re]['L2']:.4f}, " \
+                   f"Linf(u)={ghia[Re]['Linf']:.4f}"
+            if "L2_v" in ghia[Re]:
+                line += f" — L2(v)={ghia[Re]['L2_v']:.4f}, Linf(v)={ghia[Re]['Linf_v']:.4f}"
+            lines.append(line)
     else:
         lines.append("- Ghia : métriques non encore disponibles (campagne en cours)")
     if gci:
