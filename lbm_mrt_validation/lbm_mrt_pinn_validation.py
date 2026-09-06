@@ -297,6 +297,8 @@ class LBM_MRT_Solver:
         else:
             mean_ux, mean_uy, fluct_ux, fluct_uy, mean_rho = ux, uy, np.zeros_like(ux), np.zeros_like(uy), rho
 
+        self.last_residual = err if 'err' in locals() else float('inf')
+
         self.ux = mean_ux / self.U_ref
         self.uy = mean_uy / self.U_ref
         self.rho = mean_rho
@@ -388,19 +390,25 @@ class LBM_MRT_Solver:
 
 
 # ----------------------------------------------------------------------
-#  Données de référence Ghia
+#  Données de référence Ghia (1982) — chargées depuis ghiau.txt / ghiav.txt
+#  (repo root; TABLE I = u(y) at x=0.5, TABLE II = v(x) at y=0.5, physical
+#  non-dimensional values, positions = (pt_no-1)/128 of the 129-grid)
 # ----------------------------------------------------------------------
-GHIA = {
-    100: {'y': [0., 0.0547, 0.0625, 0.0703, 0.1016, 0.1719, 0.2813, 0.4531, 0.5, 0.6172, 0.7344, 0.8516, 0.9531, 0.9609,
-                0.9688, 0.9766, 1.],
-          'u': [0., -0.03717, -0.04192, -0.04775, -0.06434, -0.1015, -0.15662, -0.2109, -0.20581, -0.13641, 0.00332,
-                0.23151, 0.68717, 0.73722, 0.78871, 0.84123, 1.]},
-    1000: {
-        'y': [0., 0.0625, 0.0703, 0.0781, 0.0938, 0.1563, 0.2266, 0.2344, 0.5, 0.8047, 0.8594, 0.9063, 0.9453, 0.9531,
-              0.9609, 0.9688, 1.],
-        'u': [0., -0.18109, -0.20196, -0.2222, -0.2973, -0.38289, -0.27805, -0.10648, -0.0608, 0.05702, 0.18719,
-              0.33304, 0.46604, 0.51117, 0.57492, 0.65928, 1.]}
-}
+_GHIA_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _load_ghia_table(fname):
+    path = os.path.join(_GHIA_DIR, fname)
+    data = np.loadtxt(path, comments="#")
+    coord = data[::-1, 0]  # files are top->bottom; reorder to ascending (required by np.interp)
+    cols = {100: 1, 400: 2, 1000: 3, 3200: 4, 5000: 5, 7500: 6, 10000: 7}
+    return {Re: {('y' if fname == 'ghiau.txt' else 'x'): coord.tolist(),
+                 ('u' if fname == 'ghiau.txt' else 'v'): data[::-1, idx].tolist()}
+            for Re, idx in cols.items()}
+
+
+GHIA = _load_ghia_table("ghiau.txt")   # u(y) at x=0.5 : vertical centerline
+GHIA_V = _load_ghia_table("ghiav.txt")  # v(x) at y=0.5 : horizontal centerline
 
 
 # ----------------------------------------------------------------------
@@ -473,6 +481,7 @@ PROFILE_LABEL = {'uniform': 'Uniform U=1', 'sin_pi': r'$\sin(\pi x)$', 'sin_2pi'
                  'pinn': 'PINN (mean)', 'pinn_t': 'PINN Fourier (t-d)', 'cheb_t': 'Chebyshev (t-d)'}
 TEMPORAL_CONTROLS = ['pinn_t', 'cheb_t']   # admissibilité physique des branches (forçage périodique)
 GHIA_N, PROD_N, MAX_ITER = 256, 256, 200000
+GHIA_MAX_ITER = 1_000_000  # convergence-driven stop (residual tol), cap purely as safety
 GCI_N_list = [128, 256, 512]  # Attention: N=512 prendra du temps à s'exécuter
 
 # A20 du contrôle FINAL identifié (campagne 13, seed 42, branche Fourier) — figure 8
@@ -497,7 +506,7 @@ if __name__ == '__main__':
     for Re in [100, 1000]:
         print(f"\n Re={Re}, N={GHIA_N}")
         logfile = os.path.join(OUTDIR, f'convergence_ghia_Re{Re}.log')
-        solver = LBM_MRT_Solver(Re, GHIA_N, 'uniform', MAX_ITER, 1e-9)
+        solver = LBM_MRT_Solver(Re, GHIA_N, 'uniform', GHIA_MAX_ITER, 1e-9)
         solver.run(verbose=True, logfile=logfile)
         solver.compute_integrals()
         solver.save_fields(FIELDS_DIR)
@@ -739,6 +748,9 @@ if __name__ == '__main__':
             sol = all_results[Re][prof]
             x, v_mid = sol.centerline_profiles()[2:4]
             ax.plot(x, v_mid, color=C_PR[prof], lw=2, ls=LS[prof], label=PROFILE_LABEL[prof])
+        if Re in GHIA_V:
+            gv = GHIA_V[Re]
+            ax.scatter(gv['x'], gv['v'], color='w', s=22, zorder=5, label='Ghia et al. (1982)')
         ax.axhline(0, color='#333', lw=0.8)
         dark_axes(ax, xl='$x$ (–)', yl='$v/U_{lid}$ (–)  at $y=0.5$', title=f'Re={Re} — $v(x)$', fs=13)
         ax.legend(facecolor='#1a1a1a', edgecolor='#444', labelcolor='w', fontsize=10)
@@ -913,15 +925,19 @@ if __name__ == '__main__':
             A2_flow = amps[1] if len(amps) > 1 else 0.0
             print(f"{Re:>5} | {PROFILE_LABEL[prof]:<15} | {dom:>8} | {dom_frac:>11.2f}% | {A2_flow:>8.4f}")
 
-    print("\n[Validation Ghia]")
+    print("\n[Ghia validation]")
     for Re in [100, 1000]:
         sol = ghia_solvers[Re]
-        y, u_mid, _, _ = sol.centerline_profiles()
+        y, u_mid, x, v_mid = sol.centerline_profiles()
         g = GHIA[Re]
         u_interp = np.interp(g['y'], y, u_mid)
         L2 = np.sqrt(np.mean((u_interp - np.array(g['u'])) ** 2))
         L_inf = np.max(np.abs(u_interp - np.array(g['u'])))
-        print(f"  Re={Re} : L2 = {L2:.4f}, L∞ = {L_inf:.4f}")
+        gv = GHIA_V[Re]
+        v_interp = np.interp(gv['x'], x, v_mid)
+        L2_v = np.sqrt(np.mean((v_interp - np.array(gv['v'])) ** 2))
+        L_inf_v = np.max(np.abs(v_interp - np.array(gv['v'])))
+        print(f"  Re={Re} : L2(u) = {L2:.4f}, L∞(u) = {L_inf:.4f}, L2(v) = {L2_v:.4f}, L∞(v) = {L_inf_v:.4f}")
 
     print("\n[GCI convergence]")
     print(f"  Re=500, profile sin_2pi : p = {gci_p:.2f}, GCI = {gci_GCI:.2f}%")

@@ -62,7 +62,7 @@ def parse_ghia_gci(log_path):
     ghia, gci = {}, {}
     if os.path.exists(log_path):
         txt = open(log_path, encoding="utf-8", errors="replace").read()
-        for m in re.finditer(r"Re=(\d+)\s*:\s*L2\s*=\s*([\d.eE+-]+),\s*L∞\s*=\s*([\d.eE+-]+)", txt):
+        for m in re.finditer(r"Re=(\d+)\s*:\s*L2\(u\)\s*=\s*([\d.eE+-]+),\s*L∞\(u\)\s*=\s*([\d.eE+-]+)", txt):
             ghia[int(m.group(1))] = {"L2": float(m.group(2)), "Linf": float(m.group(3))}
         m = re.search(r"p\s*=\s*([\d.eE+-]+),\s*GCI\s*=\s*([\d.eE+-]+)\s*%", txt)
         if m:
@@ -70,6 +70,13 @@ def parse_ghia_gci(log_path):
         m2 = re.search(r"extrapolated eps\s*=\s*([\d.eE+-]+)", txt)
         if m2:
             gci["eps_exact"] = float(m2.group(1))
+    # Override Re=1000 with the converge-driven continuation result if available.
+    fin = os.path.join(HERE, "ghia_re1000_final.csv")
+    if os.path.exists(fin):
+        with open(fin, newline="") as f:
+            for row in csv.DictReader(f):
+                if row["Re"] == "1000":
+                    ghia[1000] = {"L2": float(row["L2"]), "Linf": float(row["Linf"])}
     return ghia, gci
 
 
