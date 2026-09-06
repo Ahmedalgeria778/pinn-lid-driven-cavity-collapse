@@ -1450,7 +1450,7 @@ def run_seed_study():
 # ================================================================
 def run_architecture_study():
     print("\n" + "=" * 65)
-    print("CAMPAGNE 09 : ARCHITECTURE STUDY (protocole figé) — Re=500, base 6×5, seeds 1,2,6")
+    print("CAMPAGNE 09 : ARCHITECTURE STUDY (protocole figé) — Re=500, base 6×5, seeds 0,1,2")
     print("=" * 65)
 
     out_dir = os.path.join(OUT, "09_architecture")
