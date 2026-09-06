@@ -31,7 +31,8 @@ warnings.filterwarnings('ignore')
 
 # Sortie console robuste aux caractères Unicode (Δ, ∫, ω, é, …)
 try:
-    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace', line_buffering=True)
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace', line_buffering=True)
 except Exception:
     pass
 
@@ -237,6 +238,20 @@ class LBM_MRT_Solver:
         probe_ring = np.zeros(period)                       # fluct. sonde pour périodicité
         period_ok = 0
 
+        # Série temporelle de la sonde centrale (échantillonnée à chaque pas après settle).
+        # Serve de signature de verrouillage : la réponse se cale sur f_forcée = 1/période.
+        probe_buf = np.zeros(self.max_iter + 1, dtype=np.float32)
+        probe_n = 0
+        # Accumulation PAR PHASE (8 phases) du champ instantané — vérifie que la réponse
+        # périodique est cohérente (répète exactement le cycle forcé).
+        if period > 1:
+            n_phase = 8
+            ph_sum_ux = np.zeros((n_phase, N, N))
+            ph_sum_uy = np.zeros((n_phase, N, N))
+            ph_cnt = np.zeros(n_phase)
+        else:
+            n_phase, ph_sum_ux, ph_sum_uy, ph_cnt = 0, None, None, None
+
         for it in range(1, self.max_iter + 1):
             t_idx = (it - 1) % period
             f, rho, ux, uy = mrt_step(f, M, M_INV, S_diag, EX, EY, W, self.U_lid2d, t_idx, N, OPP)
@@ -245,6 +260,10 @@ class LBM_MRT_Solver:
                 m2_sum_ux += ux * ux; m2_sum_uy += uy * uy
                 m_rho += rho
                 m_count += 1
+                probe_buf[probe_n] = ux[N // 2, N // 2]; probe_n += 1
+                if period > 1:
+                    phk = (t_idx * n_phase) // period
+                    ph_sum_ux[phk] += ux; ph_sum_uy[phk] += uy; ph_cnt[phk] += 1
 
             if it % 2000 == 0:
                 if period == 1:
@@ -286,6 +305,15 @@ class LBM_MRT_Solver:
         self.mean_count = m_count
         self.periodic = (period > 1)
         self.iters = it
+        self.probe = probe_buf[:probe_n] / self.U_ref      # sonde centrale normalisée
+        if period > 1:
+            c = np.maximum(ph_cnt, 1)[:, None, None]
+            self.phase_ux = ph_sum_ux / c / self.U_ref
+            self.phase_uy = ph_sum_uy / c / self.U_ref
+            self.phase_cnt = ph_cnt.copy()
+        else:
+            self.phase_ux = self.phase_uy = None
+            self.phase_cnt = None
         if logfile and convergence_history:
             np.savetxt(logfile, np.array(convergence_history), header='iteration,error,time', delimiter=',')
         if verbose:
@@ -343,6 +371,20 @@ class LBM_MRT_Solver:
 
     def dominant_mean_mode(self):
         return int(np.argmax(self.modal_analysis()[2]) + 1)
+
+    def save_fields(self, outdir):
+        # Sauvegarde (regénérable) des champs moyens + fluctuations + sonde + phases
+        # pour le post-traitement externe (lbm_analysis.py) et figures par cas.
+        os.makedirs(outdir, exist_ok=True)
+        tag = f"{self.lid_profile}_Re{self.Re}_N{self.N}"
+        p_ux = self.phase_ux if self.phase_ux is not None else np.zeros((0, 0))
+        p_uy = self.phase_uy if self.phase_uy is not None else np.zeros((0, 0))
+        np.savez_compressed(os.path.join(outdir, tag + ".npz"),
+                            Re=self.Re, N=self.N, profile=self.lid_profile,
+                            iters=self.iters, period=self.period, mean_count=self.mean_count,
+                            ux=self.ux, uy=self.uy, ux_fluct=self.ux_fluct, uy_fluct=self.uy_fluct,
+                            probe=self.probe, phase_ux=p_ux, phase_uy=p_uy)
+        return tag + ".npz"
 
 
 # ----------------------------------------------------------------------
@@ -438,17 +480,19 @@ A2_PINN_TABLE = {100: 0.68758, 500: 0.68355, 1000: 0.58628}
 
 OUTDIR = "./lbm_mrt_validation"
 os.makedirs(OUTDIR, exist_ok=True)
+FIELDS_DIR = os.path.join(OUTDIR, "fields")
+os.makedirs(FIELDS_DIR, exist_ok=True)
 
 # ----------------------------------------------------------------------
 #  Exécution des simulations
 # ----------------------------------------------------------------------
 if __name__ == '__main__':
     print("=" * 70)
-    print("LBM-MRT VALIDATION CFD – PUBLICATION GRADE (version corrigée)")
+    print("LBM-MRT VALIDATION CFD – PUBLICATION GRADE (final version)")
     print("=" * 70)
 
-    # 1) Validation Ghia (lid uniforme)
-    print("\n[1] Validation Ghia (lid uniforme)")
+    # 1) Ghia validation (uniform lid)
+    print("\n[1] Ghia validation (uniform lid)")
     ghia_solvers = {}
     for Re in [100, 1000]:
         print(f"\n Re={Re}, N={GHIA_N}")
@@ -456,15 +500,16 @@ if __name__ == '__main__':
         solver = LBM_MRT_Solver(Re, GHIA_N, 'uniform', MAX_ITER, 1e-9)
         solver.run(verbose=True, logfile=logfile)
         solver.compute_integrals()
+        solver.save_fields(FIELDS_DIR)
         ghia_solvers[Re] = solver
 
-    # 2) Étude de convergence GCI (Re=500, sin_2pi)
+    # 2) Grid convergence study (Re=500, sin_2pi)
     print("\n[2] Grid Convergence Study (Re=500, sin_2pi)")
     gci_solvers, gci_eps, gci_p, gci_exact, gci_GCI = grid_convergence_study(
         500, 'sin_2pi', GCI_N_list, MAX_ITER, outdir=OUTDIR)
 
-    # 3) Comparaison des 4 profils pour chaque Re
-    print("\n[3] Comparaison 4 profils × 3 Re")
+    # 3) Comparison of the 4 lid profiles for each Re
+    print("\n[3] Comparison: 4 profiles x 3 Re")
     all_results = {Re: {} for Re in RE_LIST}
     for Re in RE_LIST:
         for prof in PROFILES:
@@ -473,6 +518,7 @@ if __name__ == '__main__':
             solver = LBM_MRT_Solver(Re, PROD_N, prof, MAX_ITER, 1e-9)
             solver.run(verbose=True, logfile=logfile)
             solver.compute_integrals()
+            solver.save_fields(FIELDS_DIR)
             all_results[Re][prof] = solver
             # Sauvegarde incrémentale
             save_results_to_csv(all_results, os.path.join(OUTDIR, 'results_all.csv'))
@@ -480,10 +526,10 @@ if __name__ == '__main__':
     # Sauvegarde finale
     save_results_to_csv(all_results, os.path.join(OUTDIR, 'results_all.csv'))
 
-    # 3bis) Branches temporelles : injection des contrôles PINN complets U_lid(x,t)
-    print("\n[3bis] Branches temporelles (forçage périodique) — admissibilité physique")
-    print("       Contrôles : 'pinn_t' = Fourier/Mode-2 quasi-stationnaire + composantes temporelles")
-    print("                   'cheb_t' = Chebyshev_mod dominé par la branche temporelle (0,1)")
+    # 3bis) Time-dependent branches: injection of the complete PINN controls U_lid(x,t)
+    print("\n[3bis] Time-dependent branches (periodic forcing) — physical admissibility")
+    print("       Controls: 'pinn_t' = Fourier / mode-2 quasi-stationary + temporal terms")
+    print("                 'cheb_t' = Chebyshev_mod dominated by the temporal branch (0,1)")
     temporal_results = {Re: {} for Re in RE_LIST}
     for Re in RE_LIST:
         for prof in TEMPORAL_CONTROLS:
@@ -492,12 +538,13 @@ if __name__ == '__main__':
             solver = LBM_MRT_Solver(Re, PROD_N, prof, MAX_ITER, 1e-9)
             solver.run(verbose=True, logfile=logfile)
             solver.compute_integrals()
+            solver.save_fields(FIELDS_DIR)
             temporal_results[Re][prof] = solver
             save_temporal_results_to_csv(temporal_results,
                                          os.path.join(OUTDIR, 'results_temporal.csv'))
 
-    print("\n[Tableau C] Réponse des branches contrôlées (champ moyenné dans le temps)")
-    print(f"{'Re':>5} | {'Contrôle':<8} | {'ε':>10} | {'K':>10} | {'K_fluct':>10} | {'Kf/K':>7} | {'Mode mov':>8} | {'Mode fluct':>10}")
+    print("\n[Table C] Response of the controlled branches (time-averaged field)")
+    print(f"{'Re':>5} | {'Control':<8} | {'eps':>10} | {'K':>10} | {'K_fluct':>10} | {'Kf/K':>7} | {'Mode av':>8} | {'Mode rms':>10}")
     print("-" * 85)
     for Re in RE_LIST:
         for prof in TEMPORAL_CONTROLS:
@@ -507,13 +554,13 @@ if __name__ == '__main__':
             kf_k = sol.K_fluct / sol.K if sol.K > 0 else np.nan
             print(f"{Re:>5} | {prof:<8} | {sol.eps:>10.4e} | {sol.K:>10.4e} | {sol.K_fluct:>10.4e} | "
                   f"{kf_k:>7.1%} | {sol.dominant_mean_mode():>8} | {dom_f:>6} ({ff[dom_f-1]:.0%})")
-    print("       K_fluct/K : poids des fluctuations temporelles de la réponse (branche temporelle)")
-    print("       Mode mov = dominant du champ moyen ; Mode fluct = dominant du champ RMS")
+    print("       K_fluct/K : weight of the time fluctuations of the response (time-dependent branch)")
+    print("       Mode av = dominant of the mean field ; Mode rms = dominant of the RMS field")
 
     # ----------------------------------------------------------------------
-    #  Post-traitement et figures (correction des grilles)
+    #  Post-processing and figures
     # ----------------------------------------------------------------------
-    print("\n[4] Génération des figures...")
+    print("\n[4] Generating figures...")
     DARK = '#090909'
     PANEL = '#111111'
     C_RE = {100: '#00e5ff', 500: '#ff6b35', 1000: '#7dff6b'}
@@ -521,9 +568,9 @@ if __name__ == '__main__':
     LS = {'uniform': '-', 'sin_pi': '--', 'sin_2pi': '-.', 'pinn': ':'}
 
 
-    def dark_axes(ax, xl='', yl='', title='', fs=9):
+    def dark_axes(ax, xl='', yl='', title='', fs=13):
         ax.set_facecolor(PANEL)
-        ax.tick_params(colors='w', labelsize=8)
+        ax.tick_params(colors='w', labelsize=11)
         for sp in ax.spines.values():
             sp.set_edgecolor('#555')
         ax.grid(True, alpha=0.15, color='#333')
@@ -535,7 +582,7 @@ if __name__ == '__main__':
             ax.set_title(title, color='w', fontsize=fs, fontweight='bold')
 
 
-    # Figure 1 : Validation Ghia
+    # Figure 1 : Ghia (1982) validation — uniform lid, dimensionless variables (-)
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5.5), facecolor=DARK)
     for ax, Re in zip([ax1, ax2], [100, 1000]):
         sol = ghia_solvers[Re]
@@ -545,40 +592,42 @@ if __name__ == '__main__':
         ax.scatter(g['u'], g['y'], color='white', s=55, zorder=5, label='Ghia et al. (1982)')
         u_interp = np.interp(g['y'], y, u_mid)
         L2 = np.sqrt(np.mean((u_interp - np.array(g['u'])) ** 2))
-        ax.text(0.04, 0.94, f'$L_2$ = {L2:.4f}', transform=ax.transAxes,
-                color='yellow', fontsize=9, bbox=dict(boxstyle='round', fc='k', alpha=0.5))
-        dark_axes(ax, xl='u / U_lid  (x=0.5)', yl='y', title=f'Re = {Re}  (lid uniforme)', fs=10)
-        ax.legend(facecolor='#1a1a1a', edgecolor='#444', labelcolor='w', fontsize=9)
-    fig.suptitle('Validation Ghia (1982) – lid uniforme', color='w', fontsize=12, fontweight='bold')
-    fig.savefig(os.path.join(OUTDIR, 'fig1_ghia_validation.png'), dpi=150, bbox_inches='tight', facecolor=DARK)
+        ax.text(0.04, 0.94, '$L_2$ error (–) = {:.4f}'.format(L2), transform=ax.transAxes,
+                color='yellow', fontsize=12, bbox=dict(boxstyle='round', fc='black', alpha=0.5))
+        dark_axes(ax, xl='$u/U_{lid}$ (–)  at $x=0.5$', yl='$y$ (–)',
+                  title=f'Re = {Re}  (uniform lid)', fs=13)
+        ax.legend(facecolor='#1a1a1a', edgecolor='#444', labelcolor='w', fontsize=11)
+    fig.suptitle('LBM-MRT validation of the lid-driven cavity: Ghia et al. (1982)',
+                 color='w', fontsize=16, fontweight='bold')
+    fig.savefig(os.path.join(OUTDIR, 'fig1_ghia_validation.png'), dpi=300, bbox_inches='tight', facecolor=DARK)
     plt.close()
-    print("   → fig1_ghia_validation.png")
+    print("   -> fig1_ghia_validation.png")
 
-    # Figure 2 : GCI (Re=500, sin_2pi)
+    # Figure 2 : Grid convergence study GCI (Re=500, A2 sin(2*pi*x))
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5), facecolor=DARK)
     N_vals = GCI_N_list
-    ax1.plot(N_vals, gci_eps, 'o-', color='#00e5ff', lw=2.5, ms=10, label='ε LBM')
-    ax1.axhline(gci_exact, color='#ff6b35', ls='--', lw=2, label=f'ε* = {gci_exact:.4e}')
+    ax1.plot(N_vals, gci_eps, 'o-', color='#00e5ff', lw=2.5, ms=10, label=r'$\epsilon$ (LBM)')
+    ax1.axhline(gci_exact, color='#ff6b35', ls='--', lw=2, label=r'$\epsilon^*$ = {:.4e}'.format(gci_exact))
     for Nv, ev in zip(N_vals, gci_eps):
-        ax1.text(Nv + 5, ev, f'{ev:.4e}', color='#00e5ff', fontsize=8)
-    dark_axes(ax1, xl='N', yl='ε = ∫∫Φ dΩ', title=f'GCI = {gci_GCI:.2f}%, p = {gci_p:.2f}')
+        ax1.text(Nv + 5, ev, '{:.4e}'.format(ev), color='#00e5ff', fontsize=11)
+    dark_axes(ax1, xl='$N$ (–)', yl=r'$\epsilon$ (–)', title=f'GCI = {gci_GCI:.2f}%, p = {gci_p:.2f}')
     ax1.legend(facecolor='#1a1a1a', edgecolor='#444', labelcolor='w')
     h = 1.0 / np.array(N_vals)
     err = np.abs(np.array(gci_eps) - gci_exact)
-    ax2.loglog(h, err, 'o-', color='#7dff6b', lw=2.5, ms=10, label='|ε - ε*|')
+    ax2.loglog(h, err, 'o-', color='#7dff6b', lw=2.5, ms=10, label=r'$|\epsilon - \epsilon^*|$')
     if not np.isnan(gci_p):
-        ax2.loglog(h, err[0] * (h / h[0]) ** gci_p, '--', color='#ffaa00', lw=1.8, label=f'slope {gci_p:.2f}')
-    dark_axes(ax2, xl='h = 1/N', yl='|ε - ε*|', title='Convergence spatiale')
+        ax2.loglog(h, err[0] * (h / h[0]) ** gci_p, '--', color='#ffaa00', lw=1.8, label='slope {:.2f}'.format(gci_p))
+    dark_axes(ax2, xl='$h = 1/N$ (–)', yl=r'$|\epsilon - \epsilon^*|$ (–)', title='Spatial convergence')
     ax2.legend(facecolor='#1a1a1a', edgecolor='#444', labelcolor='w')
-    fig.suptitle('Grid Convergence Index (GCI) – Re=500, profil A₂·sin(2πx)', color='w', fontsize=12, fontweight='bold')
-    fig.savefig(os.path.join(OUTDIR, 'fig2_grid_convergence.png'), dpi=150, bbox_inches='tight', facecolor=DARK)
+    fig.suptitle('Grid convergence (GCI) — Re=500, controlled lid $A_2\\sin(2\\pi x)$',
+                 color='w', fontsize=16, fontweight='bold')
+    fig.savefig(os.path.join(OUTDIR, 'fig2_grid_convergence.png'), dpi=300, bbox_inches='tight', facecolor=DARK)
     plt.close()
-    print("   → fig2_grid_convergence.png")
+    print("   -> fig2_grid_convergence.png")
 
-    # Figure 3 : Champs de vitesse (avec grilles corrigées)
+    # Figure 3 : Velocity magnitude field (dimensionless) per Re x profile
     fig = plt.figure(figsize=(20, 13), facecolor=DARK)
     gs = gridspec.GridSpec(3, 4, figure=fig, hspace=0.30, wspace=0.28)
-    # Création des coordonnées physiques
     x_coord = np.linspace(0, 1, PROD_N)
     y_coord = np.linspace(0, 1, PROD_N)
     X, Y = np.meshgrid(x_coord, y_coord)
@@ -590,16 +639,19 @@ if __name__ == '__main__':
             spd = np.sqrt(sol.ux ** 2 + sol.uy ** 2)
             cf = ax.contourf(X, Y, spd, levels=40, cmap='plasma')
             ax.streamplot(X, Y, sol.ux, sol.uy, color='w', linewidth=0.5, density=1.2, arrowsize=0.7)
-            plt.colorbar(cf, ax=ax, pad=0.01).ax.yaxis.set_tick_params(color='w', labelcolor='w', labelsize=6)
-            ax.set_title(f'Re={Re}  {PROFILE_LABEL[prof]}', color='w', fontsize=9, pad=3)
+            cb = plt.colorbar(cf, ax=ax, pad=0.01)
+            cb.ax.yaxis.set_tick_params(color='w', labelcolor='w', labelsize=10)
+            cb.set_label('$|\\mathbf{u}|$ (–)', color='w', fontsize=11)
+            ax.set_title(f'Re={Re} · {PROFILE_LABEL[prof]}', color='w', fontsize=12, pad=3)
             ax.set_xticks([])
             ax.set_yticks([])
-    fig.suptitle('Champs de vitesse |U| – MRT D2Q9 (N=256)', color='w', fontsize=12, fontweight='bold')
-    fig.savefig(os.path.join(OUTDIR, 'fig3_velocity_fields.png'), dpi=130, bbox_inches='tight', facecolor=DARK)
+    fig.suptitle('Velocity magnitude $|\\mathbf{u}|$ (–) — MRT D2Q9 (N=256)',
+                 color='w', fontsize=16, fontweight='bold')
+    fig.savefig(os.path.join(OUTDIR, 'fig3_velocity_fields.png'), dpi=300, bbox_inches='tight', facecolor=DARK)
     plt.close()
-    print("   → fig3_velocity_fields.png")
+    print("   -> fig3_velocity_fields.png")
 
-    # Figure 4 : Dissipation (grilles corrigées)
+    # Figure 4 : Viscous dissipation field (dimensionless)
     fig = plt.figure(figsize=(20, 13), facecolor=DARK)
     gs = gridspec.GridSpec(3, 4, figure=fig, hspace=0.30, wspace=0.28)
     for ri, Re in enumerate(RE_LIST):
@@ -609,38 +661,42 @@ if __name__ == '__main__':
             d = sol.dissipation
             vmax = np.percentile(d, 99)
             cf = ax.contourf(X, Y, np.clip(d, 0, vmax), levels=40, cmap='inferno')
-            plt.colorbar(cf, ax=ax, pad=0.01).ax.yaxis.set_tick_params(color='w', labelcolor='w', labelsize=6)
-            ax.text(0.03, 0.04, f'ε={sol.eps:.2e}', transform=ax.transAxes,
-                    color='yellow', fontsize=7.5, bbox=dict(boxstyle='round', fc='k', alpha=0.5))
-            ax.set_title(f'Re={Re}  {PROFILE_LABEL[prof]}', color='w', fontsize=9, pad=3)
+            cb = plt.colorbar(cf, ax=ax, pad=0.01)
+            cb.ax.yaxis.set_tick_params(color='w', labelcolor='w', labelsize=10)
+            cb.set_label('$\\Phi$ (–)', color='w', fontsize=11)
+            ax.text(0.03, 0.04, f'$\\epsilon$ = {sol.eps:.2e} (–)', transform=ax.transAxes,
+                    color='yellow', fontsize=10, bbox=dict(boxstyle='round', fc='black', alpha=0.5))
+            ax.set_title(f'Re={Re} · {PROFILE_LABEL[prof]}', color='w', fontsize=12, pad=3)
             ax.set_xticks([])
             ax.set_yticks([])
-    fig.suptitle('Dissipation visqueuse Φ – ε = ∫∫Φ dΩ', color='w', fontsize=12, fontweight='bold')
-    fig.savefig(os.path.join(OUTDIR, 'fig4_dissipation_fields.png'), dpi=130, bbox_inches='tight', facecolor=DARK)
+    fig.suptitle('Viscous dissipation $\\Phi$ (–) — $\\epsilon = \\iint \\Phi\\,\\mathrm{d}\\Omega$',
+                 color='w', fontsize=16, fontweight='bold')
+    fig.savefig(os.path.join(OUTDIR, 'fig4_dissipation_fields.png'), dpi=300, bbox_inches='tight', facecolor=DARK)
     plt.close()
-    print("   → fig4_dissipation_fields.png")
+    print("   -> fig4_dissipation_fields.png")
 
-    # Figure 5 : Comparatif de la dissipation (inchangée)
+    # Figure 5 : Total dissipation comparison
     fig, axes = plt.subplots(1, 3, figsize=(17, 5.5), facecolor=DARK)
     xp = np.arange(len(PROFILES))
     for ax, Re in zip(axes, RE_LIST):
         eps_unif = all_results[Re]['uniform'].eps
         eps_vals = [all_results[Re][p].eps for p in PROFILES]
         bars = ax.bar(xp, eps_vals, color=[C_PR[p] for p in PROFILES], alpha=0.85, width=0.6)
-        ax.axhline(eps_unif, color='w', ls=':', lw=1.5, alpha=0.6, label='ε uniforme')
+        ax.axhline(eps_unif, color='w', ls=':', lw=1.5, alpha=0.6, label='$\\epsilon$ (uniform lid)')
         for xi, ev in zip(xp, eps_vals):
             drel = (ev - eps_unif) / eps_unif * 100 if eps_unif > 0 else 0
-            ax.text(xi, ev * 1.04, f'{drel:+.1f}%', ha='center', color='yellow', fontsize=8, fontweight='bold')
+            ax.text(xi, ev * 1.04, f'{drel:+.1f}%', ha='center', color='yellow', fontsize=11, fontweight='bold')
         ax.set_xticks(xp)
-        ax.set_xticklabels([PROFILE_LABEL[p] for p in PROFILES], color='w', fontsize=7.5, rotation=15, ha='right')
-        dark_axes(ax, yl='ε = ∫∫Φ dΩ', title=f'Re = {Re}', fs=10)
-        ax.legend(facecolor='#1a1a1a', edgecolor='#444', labelcolor='w', fontsize=8)
-    fig.suptitle('Dissipation totale – Comparaison des profils', color='w', fontsize=12, fontweight='bold')
-    fig.savefig(os.path.join(OUTDIR, 'fig5_dissipation_comparison.png'), dpi=150, bbox_inches='tight', facecolor=DARK)
+        ax.set_xticklabels([PROFILE_LABEL[p] for p in PROFILES], color='w', fontsize=12, rotation=15, ha='right')
+        dark_axes(ax, yl=r'$\epsilon = \iint \Phi \, \mathrm{d}\Omega$ (–)', title=f'Re = {Re}', fs=13)
+        ax.legend(facecolor='#1a1a1a', edgecolor='#444', labelcolor='w', fontsize=11)
+    fig.suptitle('Total dissipation $\\epsilon$ (–) — lid-profile comparison',
+                 color='w', fontsize=16, fontweight='bold')
+    fig.savefig(os.path.join(OUTDIR, 'fig5_dissipation_comparison.png'), dpi=300, bbox_inches='tight', facecolor=DARK)
     plt.close()
-    print("   → fig5_dissipation_comparison.png")
+    print("   -> fig5_dissipation_comparison.png")
 
-    # Figure 6 : Analyse modale (inchangée)
+    # Figure 6 : Flow modal analysis
     fig = plt.figure(figsize=(20, 12), facecolor=DARK)
     gs = gridspec.GridSpec(3, 4, figure=fig, hspace=0.45, wspace=0.38)
     modes = np.arange(1, 11)
@@ -654,15 +710,16 @@ if __name__ == '__main__':
             dom = np.argmax(fracs) + 1
             if dom <= 10:
                 bars[dom - 1].set_color('#ffd700')
-            dark_axes(ax, xl='Mode n', yl='Énergie (%)',
-                      title=f'Re={Re}  {PROFILE_LABEL[prof]}\nMode {dom}: {fracs_pct[dom - 1]:.1f}%', fs=8)
+            dark_axes(ax, xl='Mode index $n$ (–)', yl='Modal energy fraction (%)',
+                      title=f'Re={Re} · {PROFILE_LABEL[prof]}\nMode {dom}: {fracs_pct[dom - 1]:.1f}%', fs=11)
             ax.set_xlim(0.5, 10.5)
-    fig.suptitle('Analyse modale – u(x=0.5, y) – Réponse de l’écoulement', color='w', fontsize=12, fontweight='bold')
-    fig.savefig(os.path.join(OUTDIR, 'fig6_modal_analysis.png'), dpi=130, bbox_inches='tight', facecolor=DARK)
+    fig.suptitle('Flow response — modal energy fractions of $u(0.5,y)$',
+                 color='w', fontsize=16, fontweight='bold')
+    fig.savefig(os.path.join(OUTDIR, 'fig6_modal_analysis.png'), dpi=300, bbox_inches='tight', facecolor=DARK)
     plt.close()
-    print("   → fig6_modal_analysis.png")
+    print("   -> fig6_modal_analysis.png")
 
-    # Figure 7 : Profils centre-ligne (inchangée)
+    # Figure 7 : Centerline profiles
     fig = plt.figure(figsize=(20, 12), facecolor=DARK)
     gs = gridspec.GridSpec(3, 2, figure=fig, hspace=0.40, wspace=0.32)
     for ri, Re in enumerate(RE_LIST):
@@ -673,9 +730,9 @@ if __name__ == '__main__':
             ax.plot(u_mid, y, color=C_PR[prof], lw=2, ls=LS[prof], label=PROFILE_LABEL[prof])
         if Re in GHIA:
             g = GHIA[Re]
-            ax.scatter(g['u'], g['y'], color='w', s=22, zorder=5, label='Ghia')
-        dark_axes(ax, xl='u / U_lid  (x=0.5)', yl='y', title=f'Re={Re}  u(y)', fs=10)
-        ax.legend(facecolor='#1a1a1a', edgecolor='#444', labelcolor='w', fontsize=7.5, loc='lower right')
+            ax.scatter(g['u'], g['y'], color='w', s=22, zorder=5, label='Ghia et al. (1982)')
+        dark_axes(ax, xl='$u/U_{lid}$ (–)  at $x=0.5$', yl='$y$ (–)', title=f'Re={Re} — $u(y)$', fs=13)
+        ax.legend(facecolor='#1a1a1a', edgecolor='#444', labelcolor='w', fontsize=10, loc='lower right')
 
         ax = fig.add_subplot(gs[ri, 1])
         for prof in PROFILES:
@@ -683,22 +740,23 @@ if __name__ == '__main__':
             x, v_mid = sol.centerline_profiles()[2:4]
             ax.plot(x, v_mid, color=C_PR[prof], lw=2, ls=LS[prof], label=PROFILE_LABEL[prof])
         ax.axhline(0, color='#333', lw=0.8)
-        dark_axes(ax, xl='x', yl='v / U_lid  (y=0.5)', title=f'Re={Re}  v(x)', fs=10)
-        ax.legend(facecolor='#1a1a1a', edgecolor='#444', labelcolor='w', fontsize=7.5)
-    fig.suptitle('Profils centre-ligne – u(0.5,y) et v(x,0.5)', color='w', fontsize=12, fontweight='bold')
-    fig.savefig(os.path.join(OUTDIR, 'fig7_centerline_profiles.png'), dpi=150, bbox_inches='tight', facecolor=DARK)
+        dark_axes(ax, xl='$x$ (–)', yl='$v/U_{lid}$ (–)  at $y=0.5$', title=f'Re={Re} — $v(x)$', fs=13)
+        ax.legend(facecolor='#1a1a1a', edgecolor='#444', labelcolor='w', fontsize=10)
+    fig.suptitle('Centerline profiles — $u(0.5,y)$ and $v(x,0.5)$',
+                 color='w', fontsize=16, fontweight='bold')
+    fig.savefig(os.path.join(OUTDIR, 'fig7_centerline_profiles.png'), dpi=300, bbox_inches='tight', facecolor=DARK)
     plt.close()
-    print("   → fig7_centerline_profiles.png")
+    print("   -> fig7_centerline_profiles.png")
 
-    # Figure 8 : A₂ et enstrophie (inchangée)
+    # Figure 8 : Mode-2 amplitude and enstrophy robustness
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5.5), facecolor=DARK)
     Re_vals = RE_LIST
     A2_pinn = {k: A2_PINN_TABLE[k] for k in [100, 500, 1000]}
     A2_lbm = [all_results[Re]['sin_2pi'].modal_analysis()[1][1] for Re in Re_vals]
-    ax1.plot(Re_vals, A2_lbm, 's--', color='#00e5ff', lw=2, ms=9, label='A₂ LBM (réponse flow)')
-    ax1.plot(Re_vals, [A2_pinn[r] for r in Re_vals], 'o-', color='#ff6b35', lw=2.5, ms=8, label='A₂ PINN')
-    ax1.axhline(np.mean(list(A2_pinn.values())), color='#ff6b35', ls=':', lw=1.2, alpha=0.6, label='PINN mean')
-    dark_axes(ax1, xl='Re', yl='A₂', title='Mode 2 – Robustesse Reynolds')
+    ax1.plot(Re_vals, A2_lbm, 's--', color='#00e5ff', lw=2, ms=9, label='$A_2$ (LBM flow response)')
+    ax1.plot(Re_vals, [A2_pinn[r] for r in Re_vals], 'o-', color='#ff6b35', lw=2.5, ms=8, label='$A_2$ (PINN control)')
+    ax1.axhline(np.mean(list(A2_pinn.values())), color='#ff6b35', ls=':', lw=1.2, alpha=0.6, label='$A_2$ PINN (mean)')
+    dark_axes(ax1, xl='$Re$ (–)', yl='$A_2$ (–)', title='Mode 2 — Reynolds robustness')
     ax1.legend(facecolor='#1a1a1a', edgecolor='#444', labelcolor='w')
 
     xp = np.arange(len(Re_vals))
@@ -707,15 +765,15 @@ if __name__ == '__main__':
         Z_vals = [all_results[Re][prof].Z for Re in Re_vals]
         ax2.bar(xp + i * width, Z_vals, width, color=C_PR[prof], alpha=0.85, label=PROFILE_LABEL[prof])
     ax2.set_xticks(xp + 1.5 * width)
-    ax2.set_xticklabels([f'Re={r}' for r in Re_vals], color='w')
-    dark_axes(ax2, yl='Z = ∫∫ ω² dΩ', title='Enstrophie – 4 profils')
-    ax2.legend(facecolor='#1a1a1a', edgecolor='#444', labelcolor='w', fontsize=8, ncol=2)
-    fig.suptitle('Robustesse des modes et enstrophie', color='w', fontsize=12, fontweight='bold')
-    fig.savefig(os.path.join(OUTDIR, 'fig8_robustness.png'), dpi=150, bbox_inches='tight', facecolor=DARK)
+    ax2.set_xticklabels([f'Re={r}' for r in Re_vals], color='w', fontsize=12)
+    dark_axes(ax2, yl=r'$Z = \iint \omega^2 \, \mathrm{d}\Omega$ (–)', title='Enstrophy — lid profiles')
+    ax2.legend(facecolor='#1a1a1a', edgecolor='#444', labelcolor='w', fontsize=10, ncol=2)
+    fig.suptitle('Mode-2 amplitude and enstrophy robustness', color='w', fontsize=16, fontweight='bold')
+    fig.savefig(os.path.join(OUTDIR, 'fig8_robustness.png'), dpi=300, bbox_inches='tight', facecolor=DARK)
     plt.close()
-    print("   → fig8_robustness.png")
+    print("   -> fig8_robustness.png")
 
-    # Figure 9 : Réponse des branches contrôlées (champ moyenné dans le temps)
+    # Figure 9 : Time-averaged response of the controlled branches
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5.5), facecolor=DARK)
     xp = np.arange(len(RE_LIST))
     width = 0.38
@@ -723,9 +781,9 @@ if __name__ == '__main__':
         K_fluct_ratio = [temporal_results[Re][prof].K_fluct / max(temporal_results[Re][prof].K, 1e-30) for Re in RE_LIST]
         ax1.bar(xp + (pi - 0.5) * width, K_fluct_ratio, width, color=C_PR[prof], alpha=0.9, label=PROFILE_LABEL[prof])
     ax1.set_xticks(xp)
-    ax1.set_xticklabels([f'Re={r}' for r in RE_LIST], color='w')
-    dark_axes(ax1, yl='K_fluct / K', title='Poids des fluctuations temporelles (branches)')
-    ax1.legend(facecolor='#1a1a1a', edgecolor='#444', labelcolor='w', fontsize=8)
+    ax1.set_xticklabels([f'Re={r}' for r in RE_LIST], color='w', fontsize=12)
+    dark_axes(ax1, yl='$K_{fluct}/K$ (–)', title='Weight of time fluctuations (branches)')
+    ax1.legend(facecolor='#1a1a1a', edgecolor='#444', labelcolor='w', fontsize=10)
 
     for pi, prof in enumerate(TEMPORAL_CONTROLS):
         dom_fracs = []
@@ -734,24 +792,107 @@ if __name__ == '__main__':
             dom_fracs.append(ff.max())
         ax2.plot(xp, dom_fracs, 'o-', lw=2.5, ms=9, color=C_PR[prof], label=PROFILE_LABEL[prof])
     ax2.set_xticks(xp)
-    ax2.set_xticklabels([f'Re={r}' for r in RE_LIST], color='w')
-    dark_axes(ax2, yl='Fraction d’énergie du mode dominant', title='Structure modale de u_mid (moyenne)')
+    ax2.set_xticklabels([f'Re={r}' for r in RE_LIST], color='w', fontsize=12)
+    dark_axes(ax2, yl='Dominant-mode energy fraction (–)', title='Modal structure of $u_{mid}$ (mean)')
     ax2.set_ylim(0, 1.02)
-    ax2.legend(facecolor='#1a1a1a', edgecolor='#444', labelcolor='w', fontsize=8)
-    fig.suptitle('Validation des branches par le LBM indépendant : réponse moyennée dans le temps',
-                 color='w', fontsize=12, fontweight='bold')
-    fig.savefig(os.path.join(OUTDIR, 'fig9_temporal_branches.png'), dpi=150, bbox_inches='tight', facecolor=DARK)
+    ax2.legend(facecolor='#1a1a1a', edgecolor='#444', labelcolor='w', fontsize=10)
+    fig.suptitle('Independent-LBM branch response (time-averaged field)',
+                 color='w', fontsize=16, fontweight='bold')
+    fig.savefig(os.path.join(OUTDIR, 'fig9_temporal_branches.png'), dpi=300, bbox_inches='tight', facecolor=DARK)
     plt.close()
-    print("   → fig9_temporal_branches.png")
+    print("   -> fig9_temporal_branches.png")
+
+    # Figure 10 : Time-dependent dynamics PER CASE — mean/RMS fields, centerline,
+    # central probe (8 periods), FFT spectrum (lock-in on f_forced=1/P) and
+    # phase-averaged response (8 phases) — signature of a coherent periodic response.
+    for prof in TEMPORAL_CONTROLS:
+        for Re in RE_LIST:
+            sol = temporal_results[Re][prof]
+            probe = sol.probe
+            period = sol.period
+            N = sol.N
+            yy = np.linspace(0, 1, N)
+            fig = plt.figure(figsize=(15.5, 8.2), facecolor=DARK)
+            gs = fig.add_gridspec(2, 3, hspace=0.62, wspace=0.38)
+            ax = fig.add_subplot(gs[0, 0])
+            im = ax.pcolormesh(sol.ux, cmap='inferno', vmin=-0.08, vmax=0.08)
+            cb = fig.colorbar(im, ax=ax, shrink=0.85)
+            cb.set_label('$u$ (–)', color='w', fontsize=11)
+            dark_axes(ax, xl='$x$ (–)', yl='$y$ (–)', title='$u$ — time mean')
+            ax = fig.add_subplot(gs[0, 1])
+            fluct = np.hypot(sol.ux_fluct, sol.uy_fluct)
+            im = ax.pcolormesh(fluct, cmap='viridis')
+            cb = fig.colorbar(im, ax=ax, shrink=0.85)
+            cb.set_label("$(u'^2+v'^2)^{1/2}$ (–)", color='w', fontsize=11)
+            dark_axes(ax, xl='$x$ (–)', yl='$y$ (–)', title='RMS fluctuations')
+            ax = fig.add_subplot(gs[0, 2])
+            ax.plot(sol.ux[:, N // 2], yy, color='#00e5ff', lw=2, label='$u_{mean}$')
+            ax.plot(sol.ux_fluct[:, N // 2], yy, color='#ff6b35', ls='--', lw=2, label="$u'_{rms}$")
+            dark_axes(ax, xl='$u$ (–)', yl='$y$ (–)', title='Centerline $x=0.5$ (mean + RMS)')
+            ax.legend(facecolor='#1a1a1a', edgecolor='#444', labelcolor='w', fontsize=10)
+            ax = fig.add_subplot(gs[1, 0])
+            win = probe[-8 * period:]
+            tax = np.arange(len(win)) / period
+            ax.plot(tax, win, color='#7dff6b', lw=1.2)
+            dark_axes(ax, xl='$t/P_{forced}$ (–)', yl='$u_{probe}$ (–)',
+                      title='Central probe ($x$=$y$=0.5) — last 8 periods')
+            ax = fig.add_subplot(gs[1, 1])
+            seg = probe[-16384:]
+            spec = np.abs(np.fft.rfft(seg - seg.mean()))
+            freq = np.fft.rfftfreq(len(seg)) * period
+            ax.semilogy(freq[1:], spec[1:], color='#ffcc00', lw=1.3)
+            ax.axvline(1.0, color='white', ls='--', lw=1.5, label='$f_{forced}$')
+            ax.set_xlim(0, 4)
+            dark_axes(ax, xl='$f/f_{forced}$ (–)', yl='$|FFT|$ (–)', title='Spectrum — lock-in')
+            ax.legend(facecolor='#1a1a1a', edgecolor='#444', labelcolor='w', fontsize=10)
+            ax = fig.add_subplot(gs[1, 2])
+            cmap = plt.get_cmap('cool')
+            for k in range(sol.phase_ux.shape[0]):
+                ax.plot(sol.phase_ux[k][:, N // 2], yy, color=cmap(k / (sol.phase_ux.shape[0] - 1)),
+                        lw=1.6, label=f'$\\phi_{k}$')
+            dark_axes(ax, xl='$u(y)$ per phase (–)', yl='$y$ (–)', title='Phase-averaged field (8 phases)')
+            ax.legend(facecolor='#1a1a1a', edgecolor='#444', labelcolor='w', fontsize=9, ncol=2, loc='upper right')
+            fig.suptitle(f'Time-dependent response — {PROFILE_LABEL[prof]} · Re={Re} '
+                         f'(forced period P={period}, $K_{{fluct}}/K$={sol.K_fluct / max(sol.K, 1e-30):.1%})',
+                         color='w', fontsize=15, fontweight='bold')
+            fig.savefig(os.path.join(OUTDIR, f'fig10_{prof}_Re{Re}_temporal.png'),
+                        dpi=300, bbox_inches='tight', facecolor=DARK)
+            plt.close()
+    print("   -> fig10_<control>_Re<Re>_temporal.png  (fields + probe + phases)")
+
+    # Figure 11 : Probe spectra of ALL temporal cases — all lock on 1/P
+    fig, axes = plt.subplots(len(RE_LIST), len(TEMPORAL_CONTROLS),
+                             figsize=(12.5, 9), facecolor=DARK)
+    for ri, Re in enumerate(RE_LIST):
+        for ci, prof in enumerate(TEMPORAL_CONTROLS):
+            ax = axes[ri, ci]
+            sol = temporal_results[Re][prof]
+            seg = sol.probe[-16384:]
+            spec = np.abs(np.fft.rfft(seg - seg.mean()))
+            freq = np.fft.rfftfreq(len(seg)) * sol.period
+            ax.semilogy(freq[1:], spec[1:], color=C_RE[Re], lw=1.2)
+            ax.axvline(1.0, color='white', ls='--', lw=1.2)
+            ax.set_xlim(0, 2.5)
+            ax.axhline(0.05 * spec.max(), color='#333', ls=':', lw=1)  # noise threshold
+            kk = sol.K_fluct / sol.K if sol.K > 0 else np.nan
+            ax.set_title(f'{PROFILE_LABEL[prof]} · Re={Re} — $K_{{fluct}}/K$={kk:.1%}',
+                         color='w', fontsize=11, fontweight='bold')
+            dark_axes(ax, xl='$f/f_{forced}$ (–)', yl='$|FFT|$ (–)')
+    fig.suptitle('All time-dependent branches lock on the forced frequency $f=1/P$',
+                 color='w', fontsize=16, fontweight='bold')
+    fig.savefig(os.path.join(OUTDIR, 'fig11_temporal_lockin_all.png'), dpi=300,
+                bbox_inches='tight', facecolor=DARK)
+    plt.close()
+    print("   -> fig11_temporal_lockin_all.png (global lock-in of all 6 cases)")
 
     # ----------------------------------------------------------------------
     #  Tableaux Récapitulatifs finaux
     # ----------------------------------------------------------------------
     print("\n" + "=" * 70)
-    print("  RÉSULTATS QUANTITATIFS")
+    print("  QUANTITATIVE RESULTS")
     print("=" * 70)
-    print("\n[Tableau A] Dissipation totale ε")
-    print(f"{'Re':>5} | {'Profil':<15} | {'ε':>12} | {'Δε/ε_unif (%)':>15} | {'K':>12} | {'Z':>12}")
+    print("\n[Table A] Total dissipation epsilon")
+    print(f"{'Re':>5} | {'Profile':<15} | {'eps':>12} | {'d eps/eps_unif (%)':>15} | {'K':>12} | {'Z':>12}")
     print("-" * 85)
     for Re in RE_LIST:
         eps_unif = all_results[Re]['uniform'].eps
@@ -761,8 +902,8 @@ if __name__ == '__main__':
             print(
                 f"{Re:>5} | {PROFILE_LABEL[prof]:<15} | {sol.eps:>12.4e} | {drel:>+14.2f}% | {sol.K:>12.4e} | {sol.Z:>12.4e}")
 
-    print("\n[Tableau B] Mode dominant de u_mid(y)")
-    print(f"{'Re':>5} | {'Profil':<15} | {'Mode dom':>8} | {'Énergie (%)':>12} | {'A₂ flow':>8}")
+    print("\n[Table B] Dominant mode of u_mid(y)")
+    print(f"{'Re':>5} | {'Profile':<15} | {'Mode dom':>8} | {'Energy (%)':>12} | {'A2 flow':>8}")
     print("-" * 65)
     for Re in RE_LIST:
         for prof in PROFILES:
@@ -782,9 +923,9 @@ if __name__ == '__main__':
         L_inf = np.max(np.abs(u_interp - np.array(g['u'])))
         print(f"  Re={Re} : L2 = {L2:.4f}, L∞ = {L_inf:.4f}")
 
-    print("\n[Convergence GCI]")
-    print(f"  Re=500, profil sin_2pi : p = {gci_p:.2f}, GCI = {gci_GCI:.2f}%")
-    print(f"  ε extrapolé = {gci_exact:.4e}")
+    print("\n[GCI convergence]")
+    print(f"  Re=500, profile sin_2pi : p = {gci_p:.2f}, GCI = {gci_GCI:.2f}%")
+    print(f"  extrapolated eps = {gci_exact:.4e}")
 
     print("\n" + "=" * 70)
     print(f"  Toutes les figures et logs sont dans : {OUTDIR}")

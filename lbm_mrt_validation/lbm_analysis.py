@@ -39,9 +39,9 @@ PROFILES = ["uniform", "sin_pi", "sin_2pi", "pinn"]
 TEMPORAL = ["pinn_t", "cheb_t"]
 
 
-def dark_axes(ax, xl="", yl="", title="", fs=9):
+def dark_axes(ax, xl="", yl="", title="", fs=13):
     ax.set_facecolor(PANEL)
-    ax.tick_params(colors="w", labelsize=8)
+    ax.tick_params(colors="w", labelsize=11)
     for sp in ax.spines.values():
         sp.set_edgecolor("#555")
     ax.grid(True, alpha=0.15, color="#333")
@@ -67,7 +67,7 @@ def parse_ghia_gci(log_path):
         m = re.search(r"p\s*=\s*([\d.eE+-]+),\s*GCI\s*=\s*([\d.eE+-]+)\s*%", txt)
         if m:
             gci = {"p": float(m.group(1)), "GCI": float(m.group(2))}
-        m2 = re.search(r"ε extrapolé\s*=\s*([\d.eE+-]+)", txt)
+        m2 = re.search(r"extrapolated eps\s*=\s*([\d.eE+-]+)", txt)
         if m2:
             gci["eps_exact"] = float(m2.group(1))
     return ghia, gci
@@ -116,23 +116,23 @@ def main():
                             r["mode_frac"], r["mode_dom_fluct"], r["mode_frac_fluct"],
                             r["A2_flow"], r["A2_flow_fluct"]])
 
-    # 4) Figure consolidée : PINN vs LBM
+    # 4) Consolidated figure: PINN control injected into an independent solver
     fig, axs = plt.subplots(2, 2, figsize=(14, 9), facecolor=DARK)
-    # (a) ε — réponse indépendante vs uniforme
+    # (a) eps — independent response vs uniform lid
     ax = axs[0, 0]
     for prof in ["sin_2pi", "pinn"]:
         d = [res_all[Re][prof]["eps"] for Re in RE_LIST]
         ax.plot(RE_LIST, d, "o-", lw=2.2, ms=8, color=C_PR[prof], label=PROFILE_LABEL[prof])
     ax.plot(RE_LIST, [res_all[Re]["uniform"]["eps"] for Re in RE_LIST], "d--", color="#cccccc",
-            lw=1.8, label="Uniform (réf.)")
+            lw=1.8, label="Uniform (reference)")
     ax.set_xscale("log")
-    dark_axes(ax, xl="Re", yl=r"$\epsilon_{LBM}$", title="Dissipation indépendante (LBM-MRT)")
-    ax.legend(facecolor="#1a1a1a", edgecolor="#444", labelcolor="w", fontsize=8)
-    # (b) A2 du flux : PINN (a priori) vs LBM observé
+    dark_axes(ax, xl=r"$Re$ (–)", yl=r"$\epsilon_{LBM}$ (–)", title="Independent dissipation (LBM-MRT)")
+    ax.legend(facecolor="#1a1a1a", edgecolor="#444", labelcolor="w", fontsize=10)
+    # (b) A2 of the flow: PINN (a priori) vs LBM measured
     ax = axs[0, 1]
     ax.plot(RE_LIST, [A2_PINN[r] for r in RE_LIST], "x--", color="white", lw=1.6, ms=10,
             label="$A_2$ PINN control (a priori)")
-    # A2 du flux mesuré sur le champ moyen du LBM pour le contrôle 'pinn'
+    # A2 of the flow measured on the LBM mean field for the 'pinn' control
     a2_flow = {}
     for Re in RE_LIST:
         fp = os.path.join(OUTDIR, "fields", f"pinn_Re{Re}_N256.npz")
@@ -144,8 +144,8 @@ def main():
             a2_flow[Re] = float(amps[1])
     if a2_flow:
         ax.plot(list(a2_flow.keys()), list(a2_flow.values()), "o-", lw=2.4, ms=9,
-                color="#ff6b35", label="$A_2$ mesuré (LBM, moyen)")
-    # aspect ratio (1:1 vs 2:1) A2 mesuré PINN
+                color="#ff6b35", label="$A_2$ measured (LBM, mean)")
+    # aspect ratio (1:1 vs 2:1) A2 measured by the PINN
     ar_csv = os.path.join(ROOT, "results_reviewers", "09_aspect_ratio", "aspect_ratio_results.csv")
     ar_vals = []
     if os.path.exists(ar_csv):
@@ -153,12 +153,12 @@ def main():
             ar_vals.append(float(row["A20"]))
     if ar_vals:
         ax.scatter([400, 420], ar_vals, s=110, marker="*", color="#ffcc00",
-                   label="Aspect ratio 1:1 / 2:1")
+                   label="Aspect ratio 1:1 / 2:1 (PINN)")
     ax.set_yscale("log")
     ax.set_xscale("log")
-    dark_axes(ax, xl="Re", yl=r"$A_2^{flow}$", title="$A_2$ du flux : PINN vs LBM indépendant")
-    ax.legend(facecolor="#1a1a1a", edgecolor="#444", labelcolor="w", fontsize=7)
-    # (c) Branches temporelles : K_fluct/K
+    dark_axes(ax, xl=r"$Re$ (–)", yl=r"$A_2^{flow}$ (–)", title=r"Flow $A_2$: PINN vs independent LBM")
+    ax.legend(facecolor="#1a1a1a", edgecolor="#444", labelcolor="w", fontsize=8)
+    # (c) Time-dependent branches: K_fluct/K
     ax = axs[1, 0]
     xp = np.arange(len(RE_LIST))
     w = 0.34
@@ -167,27 +167,27 @@ def main():
                      np.nan) for Re in RE_LIST]
         ax.bar(xp + (i - 0.5) * w, vals, w, color=C_PR[ctrl], alpha=0.9,
                label=PROFILE_LABEL[ctrl])
-    ax.set_xticks(xp); ax.set_xticklabels([f"Re={r}" for r in RE_LIST], color="w")
+    ax.set_xticks(xp); ax.set_xticklabels([f"Re={r}" for r in RE_LIST], color="w", fontsize=12)
     ax.axhline(0.1, color="#555", ls=":", lw=1.2)
-    dark_axes(ax, xl="", yl="K_fluct / K", title="Poids des fluctuations (branches)")
-    ax.legend(facecolor="#1a1a1a", edgecolor="#444", labelcolor="w", fontsize=8)
-    # (d) Modes dominants : champ moyen vs fluctuations
+    dark_axes(ax, xl="", yl=r"$K_{fluct}/K$ (–)", title="Weight of time fluctuations (branches)")
+    ax.legend(facecolor="#1a1a1a", edgecolor="#444", labelcolor="w", fontsize=10)
+    # (d) Dominant modes: mean field vs fluctuations
     ax = axs[1, 1]
     for i, ctrl in enumerate(TEMPORAL):
         mm = [next((r["mode_dom"] for r in res_t if r["Re"] == Re and r["control"] == ctrl),
                    np.nan) for Re in RE_LIST]
         mf = [next((r["mode_dom_fluct"] for r in res_t if r["Re"] == Re and r["control"] == ctrl),
                    np.nan) for Re in RE_LIST]
-        ax.plot(xp + (i - 0.5) * 0.3, mm, "o-", color=C_PR[ctrl], label=PROFILE_LABEL[ctrl] + " (moy.)")
+        ax.plot(xp + (i - 0.5) * 0.3, mm, "o-", color=C_PR[ctrl], label=PROFILE_LABEL[ctrl] + " (mean)")
         ax.plot(xp + (i - 0.5) * 0.3, mf, "s--", color=C_PR[ctrl], alpha=0.6, ms=6,
                 label=PROFILE_LABEL[ctrl] + " (fluct.)")
-    ax.set_xticks(xp); ax.set_xticklabels([f"Re={r}" for r in RE_LIST], color="w")
+    ax.set_xticks(xp); ax.set_xticklabels([f"Re={r}" for r in RE_LIST], color="w", fontsize=12)
     ax.set_ylim(0, 11)
-    dark_axes(ax, xl="", yl="Mode dominant", title="Modes du flux (moy. vs fluct.)")
-    ax.legend(facecolor="#1a1a1a", edgecolor="#444", labelcolor="w", fontsize=7, ncol=2)
-    fig.suptitle("Contrôle PINN injecté dans un solveur indépendant (LBM-MRT) : validation croisée",
-                 color="w", fontsize=12, fontweight="bold")
-    fig.savefig(os.path.join(OUTDIR, "fig12_consolidated.png"), dpi=150,
+    dark_axes(ax, xl="", yl="Dominant mode index (–)", title="Flow modes (mean vs fluctuations)")
+    ax.legend(facecolor="#1a1a1a", edgecolor="#444", labelcolor="w", fontsize=8, ncol=2)
+    fig.suptitle("PINN control injected into an independent solver (LBM-MRT): cross-validation",
+                 color="w", fontsize=16, fontweight="bold")
+    fig.savefig(os.path.join(OUTDIR, "fig12_consolidated.png"), dpi=300,
                 bbox_inches="tight", facecolor=DARK)
     plt.close()
     print("   -> fig12_consolidated.png")

@@ -10,6 +10,10 @@ logs/
 
 # ── LBM: champs bruts régénérables (figures/analyse relancables) ──
 lbm_mrt_validation/fields/
+lbm_mrt_validation/gci_progress.csv
+lbm_mrt_validation/results_*.csv
+lbm_mrt_validation/validation_*.csv
+lbm_mrt_validation/lbm_*.csv
 
 # ── Editors / OS ────────────────────────────────────────────
 .vscode/
