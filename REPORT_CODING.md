@@ -1,6 +1,6 @@
 # Detailed report — Coding of the reviewer-response campaigns
 
-**Date**: 2026-09-05 (v5, complete mode_count + temporal campaigns, energy diagnostic)
+**Date**: 2026-09-05 (v5.2 — architecture campaign 09 COMPLETED, parametrization running)
 **Author**: opencode (big-pickle)
 **Folder**: `PoF_R_lid_driven_paper/`
 
@@ -64,6 +64,35 @@ User decision frozen before any `small`/`large` result (2026-09-05):
 - The spontaneous temporal fraction stays ≤1.5 %: the identified control is **quasi-steady** in the spatial mode (2,0) — the temporal basis modes do not "cheat".
 
 > **Consensus wording**: *"Enriching the temporal basis (1, 3, or 5 temporal modes) leaves the spatial dominance essentially unchanged (mode-2 fraction 89.2–92.3 %), with temporal contributions never exceeding 1.5 % of the control energy — the identified control is quasi-steady in the second spatial mode."*
+
+### architecture results (R2.4) — COMPLETED (2026-09-05, ~16:34)
+
+`09_architecture/architecture_results.csv`. Seeded pairs {0,1,2} chosen a priori, Re=500, E_target=0.25, Fourier 6×5, baseline = reused `04_seed_study` models (verified identical, 44 824 params). Param counts: small 8 774 / baseline 44 824 / large 139 624.
+
+| arch | seed | E_total | A₂ = c₁₀ | mode2_fraction | temporal_fraction | dominant |
+|---|---|---:|---:|---:|---:|---|
+| small | 0 | 0.2762 | +0.7192 | **0.9361** | 0.0043 | (1,0) |
+| small | 1 | 0.2445 | +0.6644 | **0.9030** | 0.0170 | (1,0) |
+| small | 2 | 0.2561 | +0.6875 | **0.9230** | 0.0071 | (1,0) |
+| baseline | 0 | 0.2398 | −0.5053 | 0.5323 | 0.4376 | (1,0) |
+| baseline | 1 | 0.2673 | +0.6978 | 0.9107 | 0.0131 | (1,0) |
+| baseline | 2 | 0.2567 | +0.6766 | 0.8917 | 0.0504 | (1,0) |
+| large | 0 | 0.2572 | +0.6888 | **0.9223** | 0.0135 | (1,0) |
+| large | 1 | 0.2518 | +0.6610 | **0.8674** | 0.0477 | (1,0) |
+| large | 2 | 0.2541 | +0.6711 | **0.8863** | 0.0300 | (1,0) |
+
+All 9 runs: `modal_coverage = 1.0`, `reconstruction_rmse ~ 1e-16`.
+
+Pairwise Δf2 = f2(arch) − f2(baseline), intra-seed:
+- seed 0: small **+0.404** (0.532→0.936), large **+0.390** (0.532→0.922) — the intermediate branch **is pulled back onto the (2,0)-dominated branch** by both other architectures; A₂ sign flips (−0.505 → +0.72/+0.69).
+- seed 1: small −0.008, large −0.043 — unchanged within ±4 %.
+- seed 2: small +0.031, large −0.005 — unchanged within ±3 %.
+
+Mean f2 across arch (over the 3 seeds): small 0.921 / baseline 0.778 / large 0.892. Across the **6 new runs**, f2 ∈ [0.867, 0.936] — the mode-(2,0) branch is **architecture-independent within ±4 %** for seeds already on that branch.
+
+**Interpretation (reviewer R2.4)**: the network capacity (8.8 k → 44.8 k → 139.6 k params) does **not** select or destroy mode (2,0). Within-branch f2 is essentially constant; the only architectural sensitivity observed is a *restoring* one — the mixed branch of seed 0 disappears under both a smaller and a larger network, both converging to the mode-2 branch.
+
+> **Consensus wording** (suggested): *"Within a fixed seed, varying the network capacity from ~9×10³ to ~1.4×10⁵ parameters leaves the dominance of the second spatial mode essentially unchanged (mode-2 fraction 86.7–93.6 %); the intermediate branch observed for seed 0 at the baseline size is not selected under either a smaller or a larger architecture."*
 
 The guiding principle is respected:
 > **Intact historical baseline + parameterized experimental functions**
@@ -732,5 +761,6 @@ C:\Users\kings\OneDrive\Documents\Default Project\PoF_R_lid_driven_paper\
 
 - mode_count: 6/6 runs verified (`model.pt` + `metadata.json` + CSV regenerated with (8,9)).
 - temporal: 3/3 runs verified.
-- architecture (seeds {0,1,2}): small ×3 done, baseline ×3 reused (metadata only), large/seed_0 in training (created PID 41232). **To be updated when the campaign completes.**
-- gh (GitHub CLI): installation launched in background; git repo initialization + push pending user auth.
+- architecture (seeds {0,1,2}): **COMPLETED — 6/6 new runs** (small×3, large×3) + 3 baselines reused; `architecture_results.csv` generated; paired intra-seed Δf2 analyzed (see section above).
+- parametrization (Fourier vs Chebyshev mod.): launched 2026-09-05 17:39 (PID 6248) — **to be updated when it completes**.
+- gh (GitHub CLI): installed (v2.100.0); repo creation + push awaiting user authentication.

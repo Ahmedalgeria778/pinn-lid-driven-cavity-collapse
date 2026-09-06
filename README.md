@@ -43,7 +43,7 @@ PoF_R_lid_driven_paper/
 |---|---|---|
 | `07_mode_count` (6→72 coeffs) | Fourier basis richness | **87.3–92.3 %** |
 | `08_temporal` (n_t = 1, 3, 5) | number of temporal modes | **89.2–92.3 %**, f_t ≤ 1.5 % |
-| `09_architecture` (small/baseline/large) | network capacity | *filled in when the campaign completes* |
+| `09_architecture` (small/baseline/large) | network capacity (9k→140k params) | **86.7–93.6 %** (new runs; intra-seed Δf2 ≤ ±4 % on the mode-2 branch) |
 
 ### Energy sweep `03_energy_sweep` (Re=500, basis 6×5)
 
