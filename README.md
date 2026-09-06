@@ -44,6 +44,17 @@ PoF_R_lid_driven_paper/
 | `07_mode_count` (6→72 coeffs) | Fourier basis richness | **87.3–92.3 %** |
 | `08_temporal` (n_t = 1, 3, 5) | number of temporal modes | **89.2–92.3 %**, f_t ≤ 1.5 % |
 | `09_architecture` (small/baseline/large) | network capacity (9k→140k params) | **86.7–93.6 %** (new runs; intra-seed Δf2 ≤ ±4 % on the mode-2 branch) |
+| `13_parametrization` (3 Re × 2 bases) | basis family × Reynolds | Fourier: **0.92 / 0.92 / 0.64** at Re=100/500/1000; Chebyshev_mod: **≤0.06 (all Re, temporal (0,1) branch)** |
+
+### Parametrization matrix — f(2,0) in the common Fourier projection (seed 42, E\*=0.25, 6×5)
+
+| Re | fourier f₂ | fourier f_temp | chebyshev_mod f₂ | chebyshev_mod f_temp |
+|---:|---:|---:|---:|---:|
+| 100 | 0.916 | 0.007 | 0.003 | 0.993 |
+| 500 | 0.922 | 0.013 | 0.062 | 0.933 |
+| 1000 | 0.640 | 0.322 | 0.005 | 0.988 |
+
+> **Headline for R2-2**: the (2,0) collapse is **parametrization-dependent and, within the Fourier family, Reynolds-conditional** — it holds at Re=100–500 (f₂≈0.92), weakens at Re=1000 (f₂=0.64, 32 % temporal), and disappears in the modulated-Chebyshev family at all tested Re (dominant sin(πx)·cos(πt), temporal fraction ≥ 93 %).
 
 ### Energy sweep `03_energy_sweep` (Re=500, basis 6×5)
 

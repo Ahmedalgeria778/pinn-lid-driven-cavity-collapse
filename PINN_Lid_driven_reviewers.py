@@ -2004,37 +2004,49 @@ def run_parametrization_study():
     out_dir = os.path.join(OUT, "13_parametrization")
     os.makedirs(out_dir, exist_ok=True)
 
+    Re_PARAM = [100, 500, 1000]
     basis_families = ["fourier", "chebyshev_mod"]
 
     results_rows = []
     for btype in basis_families:
-        print(f"\n--- Basis family: {btype} ---")
-        set_seed(42)
-        sub_dir = os.path.join(out_dir, btype)
+        for Re in Re_PARAM:
+            print(f"\n--- Basis family: {btype} | Re={Re} ---")
+            set_seed(42)
+            sub_dir = os.path.join(out_dir, btype, f"re_{Re}")
+            os.makedirs(sub_dir, exist_ok=True)
+            model_path = os.path.join(sub_dir, "model.pt")
 
-        model, hist, _ = train_ultra(
-            re_list=[500],
-            n_mx=6, n_mt=5,
-            basis_type=btype,
-            out_dir=sub_dir,
-        )
+            if os.path.exists(model_path):
+                model = UltraPINN(arch_config=None, n_mx=N_MX, n_mt=N_MT,
+                                  lx=LX, ly=LY, basis_type=btype).to(device)
+                model.load_state_dict(torch.load(model_path, map_location="cpu", weights_only=False))
+                model.eval()
+                print(f"  [REUSE] {btype} Re={Re} (pas de retraining)")
+            else:
+                model, hist, _ = train_ultra(
+                    re_list=[Re],
+                    n_mx=N_MX, n_mt=N_MT,
+                    basis_type=btype,
+                    out_dir=sub_dir,
+                )
 
-        ac = analyze_control(model, Re=500)
-        ac["basis_type"] = btype
-        ac["energy_final"] = ac["E_total"]
-        # Metrique comparative principale : fraction du mode 2 **en projection Fourier**
-        # communement calculee pour les deux familles. Ce n'est PAS le coefficient
-        # natif de la base (Chebyshev modifie != harmonique sine).
-        ac["fourier_mode2_fraction"] = ac["mode2_fraction"]
-        ac["native_c20"] = ac.get(f"native_c_1_0", 0.0)
-        results_rows.append(ac)
+            ac = analyze_control(model, Re=Re)
+            ac["basis_type"] = btype
+            ac["energy_final"] = ac["E_total"]
+            # Metrique comparative principale : fraction du mode 2 **en projection Fourier**
+            # communement calculee pour les deux familles. Ce n'est PAS le coefficient
+            # natif de la base (Chebyshev modifie != harmonique sine).
+            ac["fourier_mode2_fraction"] = ac["mode2_fraction"]
+            ac["native_c20"] = ac.get(f"native_c_1_0", 0.0)
+            results_rows.append(ac)
 
-        save_metadata(sub_dir, extra={"campaign": "parametrization",
-                                       "basis_type": btype, "seed": 42})
+            save_metadata(sub_dir, extra={"campaign": "parametrization",
+                                           "basis_type": btype, "seed": 42,
+                                           "re_list": [Re]})
 
-        print(f"  Basis={btype} | E={ac['E_total']:.4f} | "
-              f"Fourier-mode2-frac={ac['fourier_mode2_fraction']:.4f} | "
-              f"native_c20={ac['native_c20']:.4f}")
+            print(f"  Basis={btype} Re={Re} | E={ac['E_total']:.4f} | "
+                  f"Fourier-mode2-frac={ac['fourier_mode2_fraction']:.4f} | "
+                  f"native_c20={ac['native_c20']:.4f}")
 
     if pd is not None:
         df = pd.DataFrame(results_rows)

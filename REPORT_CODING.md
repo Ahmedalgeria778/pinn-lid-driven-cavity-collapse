@@ -1,6 +1,6 @@
 # Detailed report — Coding of the reviewer-response campaigns
 
-**Date**: 2026-09-05 (v5.2 — architecture campaign 09 COMPLETED, parametrization running)
+**Date**: 2026-09-05 (v5.3 — parametrization matrix 3 Re × 2 bases COMPLETED)
 **Author**: opencode (big-pickle)
 **Folder**: `PoF_R_lid_driven_paper/`
 
@@ -93,6 +93,30 @@ Mean f2 across arch (over the 3 seeds): small 0.921 / baseline 0.778 / large 0.8
 **Interpretation (reviewer R2.4)**: the network capacity (8.8 k → 44.8 k → 139.6 k params) does **not** select or destroy mode (2,0). Within-branch f2 is essentially constant; the only architectural sensitivity observed is a *restoring* one — the mixed branch of seed 0 disappears under both a smaller and a larger network, both converging to the mode-2 branch.
 
 > **Consensus wording** (suggested): *"Within a fixed seed, varying the network capacity from ~9×10³ to ~1.4×10⁵ parameters leaves the dominance of the second spatial mode essentially unchanged (mode-2 fraction 86.7–93.6 %); the intermediate branch observed for seed 0 at the baseline size is not selected under either a smaller or a larger architecture."*
+
+### parametrization results (R2-2) — matrix 3 Re × 2 bases, COMPLETED (2026-09-05, ~00:47)
+
+`13_parametrization/parametrization_results.csv` (6 runs, seed 42 fixed, E_target=0.25, base 6×5, identical settings: LAMBDA_CTRL=200, N_PHYS=4000/N_BC=600, 3000 epochs; only `basis_type` and `Re` vary). Re=500 runs **reused** (moved to `re_500/`, skip logic, no retraining); Re=100 and Re=1000 = 4 new runs.
+
+`fourier_mode2_fraction` = fraction of the 2nd spatial harmonic in the **common Fourier projection** (the comparison metric, valid in both bases); `native_c20` = raw coefficient of the training basis (NOT comparable across bases).
+
+| Re | basis | E_total | f₂(Fourier proj.) | f_temp | A₂₀ (Fourier proj.) | native_c₂₀ | dominant | coverage |
+|---:|---|---:|---:|---:|---:|---:|---:|---:|
+| 100 | fourier | 0.2581 | **0.9158** | 0.0072 | +0.6876 | 0.6876 | (1,0) | 1.000000 |
+| 500 | fourier | 0.2534 | **0.9220** | 0.0125 | +0.6835 | 0.6835 | (1,0) | 1.000000 |
+| 1000 | fourier | 0.2687 | **0.6396** | 0.3216 | +0.5863 | 0.5863 | (1,0) | 1.000000 |
+| 100 | chebyshev_mod | 0.2890 | 0.0026 | **0.9933** | −0.0389 | 0.3366 | (0,1) | 0.999898 |
+| 500 | chebyshev_mod | 0.2850 | 0.0616 | **0.9331** | −0.1874 | 1.7519 | (0,1) | 0.999949 |
+| 1000 | chebyshev_mod | 0.2908 | 0.0048 | **0.9878** | −0.0527 | 0.6428 | (0,1) | 0.999764 |
+
+**Reading (dependence: parametrization vs Reynolds)**:
+- **Chebyshev_mod → temporally dominated branch at ALL 3 Re**: f₂ ≤ 6.2 %, f_temp ≥ 93 %, dominant (0,1) = sin(πx)·cos(πt). → **strong parametrization dependence, essentially no Re dependence** ("Case A" of the analysis).
+- **Fourier → mode-2 branch at ALL 3 Re, but weakened at Re=1000**: f₂ = 0.916 / 0.922 (Re=100/500) → **0.640 at Re=1000**, f_temp rising to 0.322 (still dominant (1,0)). → the collapse is robust but (**Case A + Reynolds-conditional**) at the upper end of the range.
+- **Energy overshoot**: all branches reach E_total ≥ 0.253 (target 0.25 ± MC noise); the obligation target (MC on training points) was satisfied equally in all runs (end-of-training MC ≈ 0.259 in Re=500 pair tested). The larger quadrature overshoot of the Chebyshev branches (≈ +14–16 %) reflects their oscillatory temporal structure, not an inconsistent protocol.
+
+> **Consensus wording** (suggested, honest answer to R2-2): *"The collapse onto the second spatial mode is parametrization-dependent and, within the Fourier family, Reynolds-conditional: it holds in the Fourier basis at Re = 100–500 (mode-2 fraction 0.92), weakens at Re = 1000 (0.64 with 32 % temporal energy), and is absent in the modulated-Chebyshev family at every Reynolds tested (temporally dominated branch sin(πx)·cos(πt), temporal fraction ≥ 93 %)."*
+
+**Next methodological step (frozen)**: independent optimization / LBM reference (`14_independent_optimization`, R2-1/R2-3/R3-3) — handled separately once the LBM solver is available. `aspect_ratio` (R3.2) remains available as a PINN-only continuation if desired in the meantime.
 
 The guiding principle is respected:
 > **Intact historical baseline + parameterized experimental functions**
@@ -484,9 +508,9 @@ The relevant items for this quantification: seeds (04), sampling (06), architect
 
 ---
 
-## 13bis. Control parametrization (NEW v2 — R2-2)
+## 13bis. Control parametrization (NEW v2 — R2-2, extended v5.3 to a 3 Re × 2 bases matrix)
 
-**Function**: `run_parametrization_study()` (lines 1874-1936)
+**Function**: `run_parametrization_study()` (lines 1986-2061)
 **MODE**: `parametrization`
 
 ### What was coded
@@ -497,13 +521,15 @@ The reviewer could respond: "You showed robustness *within the same Fourier fami
    - `fourier`: \( \sin((i+1)\pi x/L_x)\cos(j\pi t) \) (baseline)
    - `chebyshev_mod`: \( x(L_x-x)\cdot T_i(2x/L_x-1)\cdot\cos(j\pi t) \), where \(T_i\) is the Chebyshev polynomial of the 1st kind. This basis is **smooth**, satisfies \(U(0)=U(L_x)=0\), and is NOT sinusoidal.
 
-2. Implementation: `basis_type` parameter in `UltraPINN.__init__` and `U_lid()`, propagated via `train_ultra(basis_type=...)`.
+2. **v5.3 — Reynolds dimension added**: nested loop `Re_PARAM = [100, 500, 1000] × basis_families = [fourier, chebyshev_mod]`, seed 42 for every run, identical settings. Subfolders `13_parametrization/{basis}/re_{Re}/`. **Skip logic**: a `model.pt` present in the subfolder is reloaded instead of retrained (the two Re=500 models from the earlier campaign were moved into `re_500/` and reused — zero retraining).
 
-3. **`analyze_control` remains agnostic** to the training basis: it always decomposes the obtained field \(U_{lid}(x,t,Re)\) into the `sin(2πx/Lx)` harmonic via Fourier coefficients. So `mode2_fraction` is strictly comparable between the two families.
+3. Implementation: `basis_type` parameter in `UltraPINN.__init__` and `U_lid()`, propagated via `train_ultra(basis_type=...)`.
 
-4. **The question tested**: does the dominance of the spatial harmonic \( \sin(2\pi x/L_x) \) persist when the law is expressed in a non-sinusoidal basis?
+4. **`analyze_control` remains agnostic** to the training basis: it always decomposes the obtained field \(U_{lid}(x,t,Re)\) into the `sin(2πx/Lx)` harmonic via Fourier coefficients. So `mode2_fraction`/`fourier_mode2_fraction` is strictly comparable between the two families (and across Re).
 
-5. Results: `13_parametrization/parametrization_results.csv`
+5. **The question tested**: does the dominance of the spatial harmonic \( \sin(2\pi x/L_x) \) persist when the law is expressed in a non-sinusoidal basis, and how does it depend on Reynolds?
+
+6. Results: `13_parametrization/parametrization_results.csv` (6 rows) + `13_parametrization/parametrization_matrix_pivot.csv` (clean wide matrix). **Full matrix + interpretation in the executive summary above.**
 
 ---
 
@@ -762,5 +788,5 @@ C:\Users\kings\OneDrive\Documents\Default Project\PoF_R_lid_driven_paper\
 - mode_count: 6/6 runs verified (`model.pt` + `metadata.json` + CSV regenerated with (8,9)).
 - temporal: 3/3 runs verified.
 - architecture (seeds {0,1,2}): **COMPLETED — 6/6 new runs** (small×3, large×3) + 3 baselines reused; `architecture_results.csv` generated; paired intra-seed Δf2 analyzed (see section above).
-- parametrization (Fourier vs Chebyshev mod.): launched 2026-09-05 17:39 (PID 6248) — **to be updated when it completes**.
+- parametrization: **COMPLETED — matrix 3 Re {100,500,1000} × 2 bases {fourier, chebyshev_mod}** (seed 42, same protocol; Re=500 reused via skip logic, 4 new runs). `parametrization_results.csv` regenerated (6 rows) + clean pivot `parametrization_matrix_pivot.csv`. Result: Fourier → mode-2 branch at all Re (f₂ 0.92 → 0.64 at Re=1000), Chebyshev → temporal (0,1) branch at all Re.
 - gh (GitHub CLI): installed (v2.100.0); repo creation + push awaiting user authentication.
