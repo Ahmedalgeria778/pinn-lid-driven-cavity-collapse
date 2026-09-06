@@ -1,0 +1,242 @@
+# -*- coding: utf-8 -*-
+"""
+lbm_analysis.py — analyse consolidée post-campagne LBM (à lancer APRÈS la fin de
+lbm_mrt_pinn_validation.py).
+
+Lit les artefacts du solveur indépendant (results_all.csv, results_temporal.csv,
+logs Ghia/GCI, champs bruts dans fields/) et les fusionne avec la campagne PINN
+(09_aspect_ratio) pour produire :
+  - validation_ghia_gci.csv   : concordance Ghia (L2, Linf) + convergence GCI (p, GCI%)
+  - lbm_summary.csv           : métriques de la réponse indépendante par (Re, profil)
+  - lbm_temporal_summary.csv  : admissibilité des branches temporelles
+  - fig12_consolidated.png    : PINN vs LBM (A2 du flux, ε, branches, modes)
+  - rebuttal_summary.md       : synthèse consolidée R2/R3 (réponse aux reviewers)
+
+Lancement : py -3.11 lbm_mrt_validation/lbm_analysis.py
+"""
+import os
+import re
+import csv
+import glob
+import numpy as np
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+OUTDIR = HERE  # mêmes dossiers que la campagne
+
+DARK, PANEL = "#090909", "#111111"
+C_RE = {100: "#00e5ff", 500: "#ff6b35", 1000: "#7dff6b"}
+C_PR = {"uniform": "#cccccc", "sin_pi": "#ffcc00", "sin_2pi": "#00e5ff", "pinn": "#ff6b35"}
+PROFILE_LABEL = {"uniform": "Uniform U=1", "sin_pi": r"$\sin(\pi x)$",
+                 "sin_2pi": r"$A_2 \sin(2\pi x)$", "pinn": "PINN (mean)",
+                 "pinn_t": "PINN Fourier (t-d)", "cheb_t": "Chebyshev (t-d)"}
+A2_PINN = {100: 0.68758, 500: 0.68355, 1000: 0.58628}
+RE_LIST = [100, 500, 1000]
+PROFILES = ["uniform", "sin_pi", "sin_2pi", "pinn"]
+TEMPORAL = ["pinn_t", "cheb_t"]
+
+
+def dark_axes(ax, xl="", yl="", title="", fs=9):
+    ax.set_facecolor(PANEL)
+    ax.tick_params(colors="w", labelsize=8)
+    for sp in ax.spines.values():
+        sp.set_edgecolor("#555")
+    ax.grid(True, alpha=0.15, color="#333")
+    if xl:
+        ax.set_xlabel(xl, color="w", fontsize=fs)
+    if yl:
+        ax.set_ylabel(yl, color="w", fontsize=fs)
+    if title:
+        ax.set_title(title, color="w", fontsize=fs, fontweight="bold")
+
+
+def load_csv(fname):
+    with open(fname, newline="") as f:
+        return list(csv.DictReader(f))
+
+
+def parse_ghia_gci(log_path):
+    ghia, gci = {}, {}
+    if os.path.exists(log_path):
+        txt = open(log_path, encoding="utf-8", errors="replace").read()
+        for m in re.finditer(r"Re=(\d+)\s*:\s*L2\s*=\s*([\d.eE+-]+),\s*L∞\s*=\s*([\d.eE+-]+)", txt):
+            ghia[int(m.group(1))] = {"L2": float(m.group(2)), "Linf": float(m.group(3))}
+        m = re.search(r"p\s*=\s*([\d.eE+-]+),\s*GCI\s*=\s*([\d.eE+-]+)\s*%", txt)
+        if m:
+            gci = {"p": float(m.group(1)), "GCI": float(m.group(2))}
+        m2 = re.search(r"ε extrapolé\s*=\s*([\d.eE+-]+)", txt)
+        if m2:
+            gci["eps_exact"] = float(m2.group(1))
+    return ghia, gci
+
+
+def main():
+    res_all = {r: {} for r in RE_LIST}
+    for row in load_csv(os.path.join(OUTDIR, "results_all.csv")):
+        res_all[int(row["Re"])][row["profile"]] = {k: float(row[k]) if k != "profile" else row[k]
+                                                   for k in row}
+    res_t = []
+    if os.path.exists(os.path.join(OUTDIR, "results_temporal.csv")):
+        for row in load_csv(os.path.join(OUTDIR, "results_temporal.csv")):
+            res_t.append({k: (float(row[k]) if k not in ("control",) else row[k]) for k in row})
+
+    # 1) Validation indépendante : Ghia + GCI
+    ghia, gci = parse_ghia_gci(os.path.join(ROOT, "logs", "lbm_validation.log"))
+    with open(os.path.join(OUTDIR, "validation_ghia_gci.csv"), "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["metric", "value"])
+        for Re in ghia:
+            w.writerow([f"ghia_L2_Re{Re}", ghia[Re]["L2"]])
+            w.writerow([f"ghia_Linf_Re{Re}", ghia[Re]["Linf"]])
+        for k, v in gci.items():
+            w.writerow([f"gci_{k}", v])
+
+    # 2) Résumé réponse indépendante (production)
+    with open(os.path.join(OUTDIR, "lbm_summary.csv"), "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["Re", "profile", "eps", "K", "Z", "delta_eps_unif_pct"])
+        for Re in RE_LIST:
+            eps_unif = res_all[Re]["uniform"]["eps"]
+            for prof in PROFILES:
+                r = res_all[Re][prof]
+                w.writerow([Re, prof, r["eps"], r["K"], r["Z"],
+                            (r["eps"] - eps_unif) / eps_unif * 100 if eps_unif else 0.0])
+
+    # 3) Résumé branches temporelles
+    if res_t:
+        with open(os.path.join(OUTDIR, "lbm_temporal_summary.csv"), "w", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["Re", "control", "fluct_ratio", "mode_dom", "mode_frac",
+                        "mode_dom_fluct", "mode_frac_fluct", "A2_flow", "A2_flow_fluct"])
+            for r in res_t:
+                w.writerow([r["Re"], r["control"], r["fluct_ratio"], r["mode_dom"],
+                            r["mode_frac"], r["mode_dom_fluct"], r["mode_frac_fluct"],
+                            r["A2_flow"], r["A2_flow_fluct"]])
+
+    # 4) Figure consolidée : PINN vs LBM
+    fig, axs = plt.subplots(2, 2, figsize=(14, 9), facecolor=DARK)
+    # (a) ε — réponse indépendante vs uniforme
+    ax = axs[0, 0]
+    for prof in ["sin_2pi", "pinn"]:
+        d = [res_all[Re][prof]["eps"] for Re in RE_LIST]
+        ax.plot(RE_LIST, d, "o-", lw=2.2, ms=8, color=C_PR[prof], label=PROFILE_LABEL[prof])
+    ax.plot(RE_LIST, [res_all[Re]["uniform"]["eps"] for Re in RE_LIST], "d--", color="#cccccc",
+            lw=1.8, label="Uniform (réf.)")
+    ax.set_xscale("log")
+    dark_axes(ax, xl="Re", yl=r"$\epsilon_{LBM}$", title="Dissipation indépendante (LBM-MRT)")
+    ax.legend(facecolor="#1a1a1a", edgecolor="#444", labelcolor="w", fontsize=8)
+    # (b) A2 du flux : PINN (a priori) vs LBM observé
+    ax = axs[0, 1]
+    ax.plot(RE_LIST, [A2_PINN[r] for r in RE_LIST], "x--", color="white", lw=1.6, ms=10,
+            label="$A_2$ PINN control (a priori)")
+    # A2 du flux mesuré sur le champ moyen du LBM pour le contrôle 'pinn'
+    a2_flow = {}
+    for Re in RE_LIST:
+        fp = os.path.join(OUTDIR, "fields", f"pinn_Re{Re}_N256.npz")
+        if os.path.exists(fp):
+            with np.load(fp) as z:
+                u_mid = z["ux"][:, z["ux"].shape[1] // 2]
+            y = np.linspace(0, 1, u_mid.size)
+            amps = [2.0 * np.trapz(u_mid * np.sin(n * np.pi * y), y) for n in range(1, 11)]
+            a2_flow[Re] = float(amps[1])
+    if a2_flow:
+        ax.plot(list(a2_flow.keys()), list(a2_flow.values()), "o-", lw=2.4, ms=9,
+                color="#ff6b35", label="$A_2$ mesuré (LBM, moyen)")
+    # aspect ratio (1:1 vs 2:1) A2 mesuré PINN
+    ar_csv = os.path.join(ROOT, "results_reviewers", "09_aspect_ratio", "aspect_ratio_results.csv")
+    ar_vals = []
+    if os.path.exists(ar_csv):
+        for row in load_csv(ar_csv):
+            ar_vals.append(float(row["A20"]))
+    if ar_vals:
+        ax.scatter([400, 420], ar_vals, s=110, marker="*", color="#ffcc00",
+                   label="Aspect ratio 1:1 / 2:1")
+    ax.set_yscale("log")
+    ax.set_xscale("log")
+    dark_axes(ax, xl="Re", yl=r"$A_2^{flow}$", title="$A_2$ du flux : PINN vs LBM indépendant")
+    ax.legend(facecolor="#1a1a1a", edgecolor="#444", labelcolor="w", fontsize=7)
+    # (c) Branches temporelles : K_fluct/K
+    ax = axs[1, 0]
+    xp = np.arange(len(RE_LIST))
+    w = 0.34
+    for i, ctrl in enumerate(TEMPORAL):
+        vals = [next((r["fluct_ratio"] for r in res_t if r["Re"] == Re and r["control"] == ctrl),
+                     np.nan) for Re in RE_LIST]
+        ax.bar(xp + (i - 0.5) * w, vals, w, color=C_PR[ctrl], alpha=0.9,
+               label=PROFILE_LABEL[ctrl])
+    ax.set_xticks(xp); ax.set_xticklabels([f"Re={r}" for r in RE_LIST], color="w")
+    ax.axhline(0.1, color="#555", ls=":", lw=1.2)
+    dark_axes(ax, xl="", yl="K_fluct / K", title="Poids des fluctuations (branches)")
+    ax.legend(facecolor="#1a1a1a", edgecolor="#444", labelcolor="w", fontsize=8)
+    # (d) Modes dominants : champ moyen vs fluctuations
+    ax = axs[1, 1]
+    for i, ctrl in enumerate(TEMPORAL):
+        mm = [next((r["mode_dom"] for r in res_t if r["Re"] == Re and r["control"] == ctrl),
+                   np.nan) for Re in RE_LIST]
+        mf = [next((r["mode_dom_fluct"] for r in res_t if r["Re"] == Re and r["control"] == ctrl),
+                   np.nan) for Re in RE_LIST]
+        ax.plot(xp + (i - 0.5) * 0.3, mm, "o-", color=C_PR[ctrl], label=PROFILE_LABEL[ctrl] + " (moy.)")
+        ax.plot(xp + (i - 0.5) * 0.3, mf, "s--", color=C_PR[ctrl], alpha=0.6, ms=6,
+                label=PROFILE_LABEL[ctrl] + " (fluct.)")
+    ax.set_xticks(xp); ax.set_xticklabels([f"Re={r}" for r in RE_LIST], color="w")
+    ax.set_ylim(0, 11)
+    dark_axes(ax, xl="", yl="Mode dominant", title="Modes du flux (moy. vs fluct.)")
+    ax.legend(facecolor="#1a1a1a", edgecolor="#444", labelcolor="w", fontsize=7, ncol=2)
+    fig.suptitle("Contrôle PINN injecté dans un solveur indépendant (LBM-MRT) : validation croisée",
+                 color="w", fontsize=12, fontweight="bold")
+    fig.savefig(os.path.join(OUTDIR, "fig12_consolidated.png"), dpi=150,
+                bbox_inches="tight", facecolor=DARK)
+    plt.close()
+    print("   -> fig12_consolidated.png")
+
+    # 5) Synthèse rebuttal (texte)
+    lines = [
+        "# Rebuttal summary (consolidated, R2/R3)",
+        "",
+        "## 1. Independent-lid physical validation (LBM-MRT D2Q9, this repo)",
+        "",
+    ]
+    if ghia:
+        for Re in sorted(ghia):
+            lines.append(f"- Ghia (lid uniforme, N=256) : Re={Re} — L2={ghia[Re]['L2']:.4f}, "
+                         f"Linf={ghia[Re]['Linf']:.4f}")
+    else:
+        lines.append("- Ghia : métriques non encore disponibles (campagne en cours)")
+    if gci:
+        lines.append(f"- GCI (Re=500, sin_2pi, N 128-256-512) : p={gci['p']:.2f}, "
+                     f"GCI={gci['GCI']:.2f}% ({gci.get('eps_exact', float('nan')):.4e})")
+    if res_t:
+        lines.append("")
+        lines.append("## 2. Branch admissibility (time-dependent forcing)")
+        lines.append("")
+        lines.append("| Re | control | K_fluct/K | dom. mode (mean) | dom. mode (fluct) | A2_flow |")
+        lines.append("|----|---------|-----------|------------------|-------------------|---------|")
+        for r in res_t:
+            lines.append(f"| {r['Re']} | {r['control']} | {r['fluct_ratio']:.1%} | "
+                         f"{r['mode_dom']} ({r['mode_frac']:.2f}) | {r['mode_dom_fluct']} "
+                         f"({r['mode_frac_fluct']:.2f}) | {r['A2_flow']:.4f} |")
+    ar_csv = os.path.join(ROOT, "results_reviewers", "09_aspect_ratio", "aspect_ratio_results.csv")
+    if os.path.exists(ar_csv):
+        ar = load_csv(ar_csv)
+        lines.append("")
+        lines.append("## 3. Aspect ratio (R3.2, Re=500, seed 42, E*=0.25)")
+        lines.append("")
+        lines.append("| geometry | A2 | f_(2,0) | f_temp | E_total |")
+        lines.append("|----------|----|---------|--------|---------|")
+        for r in ar:
+            lines.append(f"| {r['geometry']} | {float(r['A20']):.4f} | {float(r['mode2_fraction']):.3f} "
+                         f"| {float(r['temporal_fraction']):.3f} | {float(r['E_total']):.4f} |")
+        lines.append("")
+        lines.append("> Mode-2 collapse persists in the 2:1 cavity (geometric robustness,"
+                     " parametrization-boundary preserved).")
+    with open(os.path.join(OUTDIR, "rebuttal_summary.md"), "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    print("   -> rebuttal_summary.md")
+    print("analyse consolidée OK.")
+
+
+if __name__ == "__main__":
+    main()

@@ -674,7 +674,12 @@ Not "prove global optimality". Two tests:
 - `pinn_t` (Fourier, time-dependent): **K_fluct/K = 1.2 %** → quasi-stationary branch admissibility confirmed (the flow locks on a near-steady response).
 - `cheb_t` (Chebyshev, temporal): **K_fluct/K ≈ 1.0 (104 %)** → fluctuation-dominated response — the temporally driven branch produces a coherent oscillatory flow, i.e. is **physically admissible**, not degenerate.
 
-Outputs: `lbm_mrt_validation/results_all.csv`, `results_temporal.csv`, figures `fig1_ghia_validation` … `fig9_temporal_branches`, convergence logs.
+Outputs: `lbm_mrt_validation/results_all.csv`, `results_temporal.csv`, raw regenerable fields in `fields/` (gitignored: mean + RMS fields, central probe time-series, 8-phase snapshots), figures:
+- `fig1_ghia_validation`, `fig2_grid_convergence` (GCI)
+- `fig3/fig4/fig6/fig7` (production per-case: velocity, dissipation, modal, centerlines)
+- `fig9` (branch K_fluct/K) and `fig11_temporal_lockin_all` (all temporal spectra lock on f=1/P)
+- **`fig10_<control>_Re<Re>_temporal.png` per temporal case**: mean + fluctuation fields, centerline, 8-period probe window, probe FFT, 8-phase response → branch admissibility at field level
+- post-campaign `lbm_analysis.py` → `fig12_consolidated` (PINN a priori A₂ vs LBM-measured A₂, ε, branches), `validation_ghia_gci.csv`, `lbm_summary.csv`, `lbm_temporal_summary.csv`, `rebuttal_summary.md`
 
 ---
 

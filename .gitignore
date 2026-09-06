@@ -8,6 +8,9 @@ logs/
 *.pid
 *.log
 
+# ── LBM: champs bruts régénérables (figures/analyse relancables) ──
+lbm_mrt_validation/fields/
+
 # ── Editors / OS ────────────────────────────────────────────
 .vscode/
 .idea/
