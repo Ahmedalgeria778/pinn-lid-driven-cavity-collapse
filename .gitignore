@@ -8,6 +8,14 @@ logs/
 *.pid
 *.log
 
+# ── LaTeX build artifacts ───────────────────────────────────
+manuscript/*.aux
+manuscript/*.out
+manuscript/*.bbl
+manuscript/*.blg
+manuscript/*.toc
+manuscript/*Notes.bib
+
 # ── LBM: champs bruts régénérables (figures/analyse relancables) ──
 lbm_mrt_validation/fields/
 lbm_mrt_validation/gci_progress.csv
