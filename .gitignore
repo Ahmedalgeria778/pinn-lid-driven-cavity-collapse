@@ -22,6 +22,16 @@ manuscript/ldiff_*.tex
 manuscript/marked_raw.tex
 manuscript/manuscript_prev.tex
 
+# Journal copyright: manuscript / revision documents stay out of the public repo
+manuscript/manuscript.tex
+manuscript/manuscript.pdf
+manuscript/manuscript_marked_up.tex
+manuscript/manuscript_marked_up.pdf
+manuscript/Responses_to_Editor_and_Reviewers.tex
+manuscript/Responses_to_Editor_and_Reviewers.pdf
+manuscript/Submission_Article_File.pdf
+manuscript/Submission_Marked_Up_Manuscript.pdf
+
 # ── LBM: champs bruts régénérables (figures/analyse relancables) ──
 lbm_mrt_validation/fields/
 lbm_mrt_validation/gci_progress.csv
