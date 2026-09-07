@@ -8,6 +8,7 @@
 \usepackage{multirow}
 \usepackage[font=small,labelfont=bf]{caption}
 \usepackage[hidelinks]{hyperref}
+\usepackage{xr-hyper}
 \usepackage{siunitx}
 \usepackage{array}
 
@@ -15,9 +16,11 @@
 
 \newcommand{\re}{\mathrm{Re}}
 
-\title{\large Supplementary material:\\ Physics-informed identification and independent validation of conditional modal collapse in active control of lid-driven cavity flow}
+\externaldocument{manuscript}
 
-\author{Ahmed Beniaiche, Abderrahim Larabi, Abderrahim Dourari, and Mbarek Belkadi}
+\title{\large Supplementary material:\\ Physics-informed identification and independent numerical verification of conditional modal collapse in active control of lid-driven cavity flow}
+
+\author{Ahmed Beniaiche}
 
 \date{}
 
@@ -25,11 +28,11 @@
 
 \maketitle
 
-This document collects the supplementary figures and tables that support the main text. Section and figure references that contain a number correspond to the main text.
+This document collects the supplementary figures and tables that support the main text. Section, figure, and equation references that contain a number correspond to the main text, and are resolved through the cross-referencing mechanism of the accompanying files.
 
 \section{Network architecture sweep}\label{ssec:archtable}
 
-Table~S1 complements the architecture column of the architecture-robustness table of the main text with the realized energies, parameter counts, and temporal fractions of the small and large networks. All runs are at $\re=500$ with the Fourier basis, three independent seeds per architecture, and $E^*=0.25$. The seed of the baseline network that coincides with the intermediate branch of the main-text seed study is excluded from the reported range.
+Table~S1 complements the architecture-robustness table of Section~\ref{sec:archmode} of the main text with the realized energies, parameter counts, and temporal fractions of the small and large networks. All runs are at $\re=500$ with the Fourier basis, three independent seeds per architecture, and $E^*=0.25$. The seed of the baseline network that coincides with the intermediate branch of the main-text seed study (Section~\ref{sec:seeds}) is excluded from the reported range.
 
 \begin{table}[h]
 \centering
@@ -52,7 +55,7 @@ The architecture sweep shows that the Mode-2 branch can be recovered across the 
 
 \section{Velocity and dissipation fields}
 
-Figures~S1 and~S2 show the velocity magnitude and the viscous dissipation fields of the controlled flow at $\re=100$, $500$, and $1000$, for the Fourier branch recovered in the main text, as realized by the independent LBM solver. The central circulation produced by the dominant second spatial mode and the corresponding dissipation concentration are apparent.
+Figures~S1 and~S2 show the velocity magnitude and the viscous dissipation fields of the controlled flow at $\re=100$, $500$, and $1000$, for the Fourier branch recovered in the main text, as realized by the independent LBM solver. The dissipation is displayed in the normalized form of Eq.~\eqref{eq:diss} of the main text. The central circulation produced by the dominant second spatial mode and the corresponding dissipation concentration are apparent.
 
 \begin{figure}[h]
 \centering
@@ -117,7 +120,7 @@ Figures~S5--S7 show the spatial and temporal spectra of the recovered Fourier co
 
 \section{Temporal response under the time-dependent Fourier control}
 
-The admissibility test of the main text rests on the temporal behavior of the realized flows under the time-dependent ($t$-dependent) controls. Figures~S8--S10 show the LBM response to the periodic Fourier (PINN) control at the three Reynolds numbers: the fields at the phase of maximum forcing, a probe time series of the kinetic energy, and the spectra of the fluctuation content. The realizations are quasi-stationary: the fluctuation amplitude remains below $1\%$ of the mean-flow kinetic energy at every Reynolds number. Table~S2 reports the kinetic-energy diagnostics of these realizations and of the modified-Chebyshev ones. The very large ratio $R_K=847\%$ at $\re=100$ for the Chebyshev control originates from the small denominator $K_{\mathrm{mean}}\simeq9\times10^{-5}$, about two orders of magnitude below the Fourier values, rather than from an anomalously large fluctuation amplitude.
+The admissibility test of the main text (Section~\ref{sec:stationarity}) rests on the fluctuating-to-mean-flow kinetic-energy ratio $R_K$ of Eq.~\eqref{eq:rk}, evaluated on the temporal behavior of the realized flows under the time-dependent ($t$-dependent) controls. Figures~S8--S10 show the LBM response to the periodic Fourier (PINN) control at the three Reynolds numbers: the fields at the phase of maximum forcing, a probe time series of the kinetic energy, and the spectra of the fluctuation content. The realizations are quasi-stationary: the fluctuation amplitude remains below $1\%$ of the mean-flow kinetic energy at every Reynolds number. Table~S2 reports the kinetic-energy diagnostics of these realizations and of the modified-Chebyshev ones. The very large ratio $R_K=847\%$ at $\re=100$ for the Chebyshev control originates from the small denominator $K_{\mathrm{mean}}\simeq9\times10^{-5}$, about two orders of magnitude below the Fourier values, rather than from an anomalously large fluctuation amplitude.
 
 \begin{table}[h]
 \centering
