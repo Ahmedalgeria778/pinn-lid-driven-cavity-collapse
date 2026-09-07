@@ -829,45 +829,47 @@ def make_all_figures(model, hist, loco_results, all_data_by_re, out_dir=None):
     _n_re = len(RE_LIST)
 
     plt.rcParams.update({
-        'font.family': 'serif', 'font.size': 12,
-        'axes.labelsize': 14, 'axes.titlesize': 15,
-        'legend.fontsize': 11, 'figure.dpi': 150,
+        'font.family': 'serif', 'font.size': 13,
+        'axes.labelsize': 15, 'axes.titlesize': 15,
+        'legend.fontsize': 11, 'figure.dpi': 300, 'savefig.dpi': 300,
         'lines.linewidth': 1.8,
-        'xtick.labelsize': 12, 'ytick.labelsize': 12,
+        'xtick.labelsize': 13, 'ytick.labelsize': 13,
     })
     colors = {'100': '#1D9E75', '500': '#185FA5', '1000': '#D85A30'}
+    re_mk = {100: 'o', 500: 's', 1000: '^'}
+    re_col = {100: 'k', 500: '0.45', 1000: '0.7'}
 
     fig, axes = plt.subplots(1, 3, figsize=(16, 4))
     ax = axes[0]
     ax.semilogy(hist['total'], color='#2C2C2A', lw=2, label='Total')
     ax.semilogy(hist['pde'],   color='#185FA5', ls='--', label='NS PDE')
     ax.semilogy(hist['bc'],    color='#D85A30', ls=':', label='BC')
-    ax.set_xlabel('Ep.'); ax.set_ylabel('Loss (log)')
-    ax.set_title('Convergence globale')
+    ax.set_xlabel('Epoch (–)'); ax.set_ylabel('Loss (–, log)')
+    ax.set_title('Global convergence')
     ax.legend(); ax.grid(True, alpha=0.3)
 
     ax = axes[1]
-    ax.semilogy(hist['ctrl'], color='#D85A30', label='Ctrl energie')
-    ax.semilogy(hist['diss'], color='#888780', ls='--', label='Dissipation')
+    ax.semilogy(hist['ctrl'], color='#D85A30', label='Control energy')
+    ax.semilogy(hist['diss'], color='#888780', ls='--', label='Dissipation (–)')
     ax2 = ax.twinx()
     e_arr = np.array(hist['energy']) / _n_re
-    ax2.plot(e_arr, color='#BA7517', lw=1.3, alpha=0.85, label='Energie moy.')
+    ax2.plot(e_arr, color='#BA7517', lw=1.3, alpha=0.85, label='Mean energy (–)')
     ax2.axhline(E_TARGET, color='#BA7517', ls='--', lw=0.8, alpha=0.5)
-    ax2.set_ylabel('Energie', color='#BA7517')
-    ax.set_xlabel('Ep.'); ax.set_ylabel('Loss (log)')
-    ax.set_title('Termes de controle')
+    ax2.set_ylabel('Energy (–)', color='#BA7517')
+    ax.set_xlabel('Epoch (–)'); ax.set_ylabel('Loss (–, log)')
+    ax.set_title('Control-energy terms')
     ax.legend(loc='upper right'); ax.grid(True, alpha=0.3)
 
     ax = axes[2]
     v_arr = np.array(hist['var']) / _n_re
-    ax.plot(v_arr, color='#1D9E75', label='Var U_lid')
+    ax.plot(v_arr, color='#1D9E75', label='Var $U_{lid}$ (–)')
     ax.axhline(0, color='gray', lw=0.7, ls=':')
-    ax.set_xlabel('Ep.'); ax.set_ylabel('Variance spatiale')
-    ax.set_title('Variance de U_lid (anti-trivialite)')
+    ax.set_xlabel('Epoch (–)'); ax.set_ylabel('Spatial variance (–)')
+    ax.set_title('Spatial variance of $U_{lid}$ (–)')
     ax.legend(); ax.grid(True, alpha=0.3)
-    fig.suptitle('Ultra PINN — Convergence complete', fontweight='bold')
+    fig.suptitle('Ultra PINN — full convergence', fontweight='bold')
     plt.tight_layout()
-    plt.savefig(os.path.join(out_dir, "fig1_convergence.png"), dpi=180, bbox_inches='tight')
+    plt.savefig(os.path.join(out_dir, "fig1_convergence.png"), dpi=300, bbox_inches='tight')
     plt.close(); print("  -> fig1_convergence")
 
     fig, axes = plt.subplots(1, 3, figsize=(16, 4))
@@ -884,14 +886,14 @@ def make_all_figures(model, hist, loco_results, all_data_by_re, out_dir=None):
             with torch.no_grad():
                 Up = model.U_lid(Xp, Tp, Re_t).cpu().numpy().ravel()
             ax.plot(x_grid, Up, ls=ls, alpha=alpha,
-                    label=f't={t_val:.1f}', color=colors[str(Re)])
+                    label=f't={t_val:.1f}', color=re_col[Re], marker=re_mk[Re], markevery=30)
         ax.axhline(0, color='gray', lw=0.6, ls=':')
-        ax.set_xlabel('x'); ax.set_ylabel('U_lid(x,t)')
+        ax.set_xlabel('$x$ (–)'); ax.set_ylabel('$U_{lid}(x,t)$ (–)')
         ax.set_title(f'Re = {Re}')
-        ax.legend(fontsize=7); ax.grid(True, alpha=0.3)
-    fig.suptitle('Ultra PINN — Profils spatio-temporels U_lid(x,t)', fontweight='bold')
+        ax.legend(fontsize=9); ax.grid(True, alpha=0.3)
+    fig.suptitle('Ultra PINN — spatio-temporal lid profiles $U_{lid}(x,t)$', fontweight='bold')
     plt.tight_layout()
-    plt.savefig(os.path.join(out_dir, "fig2_lid_profiles.png"), dpi=180, bbox_inches='tight')
+    plt.savefig(os.path.join(out_dir, "fig2_lid_profiles.png"), dpi=300, bbox_inches='tight')
     plt.close(); print("  -> fig2_lid_profiles")
 
     fig, axes = plt.subplots(1, 3, figsize=(16, 4))
@@ -911,12 +913,12 @@ def make_all_figures(model, hist, loco_results, all_data_by_re, out_dir=None):
             Uf = model.U_lid(Xf, Tf, Re_t).cpu().numpy().reshape(100, 100)
         im = ax.contourf(xs, ts, Uf, levels=40, cmap='RdBu_r',
                           vmin=-vmax_global, vmax=vmax_global)
-        plt.colorbar(im, ax=ax, label='U_lid')
-        ax.set_xlabel('x'); ax.set_ylabel('t')
+        plt.colorbar(im, ax=ax, label='$U_{lid}$ (–)')
+        ax.set_xlabel('$x$ (–)'); ax.set_ylabel('$t$ (–)')
         ax.set_title(f'Re = {Re}')
-    fig.suptitle('Ultra PINN — Heatmap U_lid(x,t) par Re', fontweight='bold')
+    fig.suptitle('Ultra PINN — $U_{lid}(x,t)$ heatmap per Re', fontweight='bold')
     plt.tight_layout()
-    plt.savefig(os.path.join(out_dir, "fig3_heatmap.png"), dpi=180, bbox_inches='tight')
+    plt.savefig(os.path.join(out_dir, "fig3_heatmap.png"), dpi=300, bbox_inches='tight')
     plt.close(); print("  -> fig3_heatmap")
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 4))
@@ -932,8 +934,8 @@ def make_all_figures(model, hist, loco_results, all_data_by_re, out_dir=None):
             with torch.no_grad():
                 U_scan.append(model.U_lid(Xp_, Tp_, Re_t).item())
         ax.plot(Re_scan, U_scan, 'o-', lw=1.8, ms=5, label=f'x={x_mid:.2f}')
-    ax.set_xlabel('Re'); ax.set_ylabel('U_lid(x, t=0.5)')
-    ax.set_title('Loi identifiee vs Re (lineaire)')
+    ax.set_xlabel('$Re$ (–)'); ax.set_ylabel('$U_{lid}(x, t=0.5)$ (–)')
+    ax.set_title('Identified law vs Re (linear)')
     ax.legend(); ax.grid(True, alpha=0.3)
 
     ax = axes[1]
@@ -947,22 +949,21 @@ def make_all_figures(model, hist, loco_results, all_data_by_re, out_dir=None):
     U_mid = np.array(U_mid)
     mask = U_mid > 0
     if mask.sum() > 2:
-        ax.loglog(Re_scan[mask], U_mid[mask], 'o-', color='#185FA5',
-                  lw=2, ms=6, label='U_lid (x=0.5, t=0.5)')
+        ax.loglog(Re_scan[mask], U_mid[mask], 'ko-', ms=6, label='$U_{lid}$ (x=0.5, t=0.5)')
         log_re = np.log(Re_scan[mask].astype(float))
         log_u  = np.log(U_mid[mask])
         alpha_pow = np.polyfit(log_re, log_u, 1)[0]
         C = np.exp(np.polyfit(log_re, log_u, 1)[1])
         Re_fit = np.linspace(50, 2000, 200)
-        ax.loglog(Re_fit, C * Re_fit**alpha_pow, '--', color='#D85A30',
-                  lw=1.8, label=f'U ~ Re^{{{alpha_pow:.2f}}}')
+        ax.loglog(Re_fit, C * Re_fit**alpha_pow, '--', color='0.4',
+                  lw=1.8, label=f'$U \\sim Re^{{{alpha_pow:.2f}}}$')
         ax.legend()
-    ax.set_xlabel('Re (log)'); ax.set_ylabel('U_lid (log)')
-    ax.set_title('Loi de puissance U_lid ~ Re^alpha')
+    ax.set_xlabel('$Re$ (–, log)'); ax.set_ylabel('$U_{lid}$ (–, log)')
+    ax.set_title('Power law $U_{lid} \\sim Re^{\\alpha}$')
     ax.grid(True, which='both', alpha=0.3)
-    fig.suptitle('Ultra PINN — Dependence en Re', fontweight='bold')
+    fig.suptitle('Ultra PINN — Reynolds dependence', fontweight='bold')
     plt.tight_layout()
-    plt.savefig(os.path.join(out_dir, "fig4_Re_law.png"), dpi=180, bbox_inches='tight')
+    plt.savefig(os.path.join(out_dir, "fig4_Re_law.png"), dpi=300, bbox_inches='tight')
     plt.close(); print("  -> fig4_Re_law")
 
     fig, axes = plt.subplots(1, 2, figsize=(14, 4))
@@ -972,10 +973,10 @@ def make_all_figures(model, hist, loco_results, all_data_by_re, out_dir=None):
             coeffs = model.coeff_net(normalize_Re(Re_t).view(-1,1)).squeeze().cpu().numpy()
         ax = axes[0]
         ax.plot(range(len(coeffs)), coeffs, 'o-', lw=1.5, ms=4,
-                label=f'Re={Re}', color=colors[str(Re)])
+                label=f'Re={Re}', color=re_col[Re], marker=re_mk[Re])
     axes[0].axhline(0, color='gray', lw=0.7, ls=':')
-    axes[0].set_xlabel('Indice modal')
-    axes[0].set_ylabel('Coefficient'); axes[0].set_title('Coefficients modaux par Re')
+    axes[0].set_xlabel('Modal index (–)')
+    axes[0].set_ylabel('Coefficient (–)'); axes[0].set_title('Modal coefficients vs Re')
     axes[0].legend(); axes[0].grid(True, alpha=0.3)
 
     ax = axes[1]
@@ -991,12 +992,12 @@ def make_all_figures(model, hist, loco_results, all_data_by_re, out_dir=None):
     im = ax.imshow(coeff_matrix.T, aspect='auto', cmap='RdBu_r',
                     origin='lower',
                     extent=[Re_scan_fine[0], Re_scan_fine[-1], 0, n_modes])
-    plt.colorbar(im, ax=ax, label='Coefficient')
-    ax.set_xlabel('Re'); ax.set_ylabel('Indice modal')
-    ax.set_title('Carte des coefficients vs Re')
-    fig.suptitle('Ultra PINN — Coefficients modaux U_lid', fontweight='bold')
+    plt.colorbar(im, ax=ax, label='Coefficient (–)')
+    ax.set_xlabel('$Re$ (–)'); ax.set_ylabel('Modal index (–)')
+    ax.set_title('Coefficient map vs Re')
+    fig.suptitle('Ultra PINN — modal coefficients $U_{lid}$', fontweight='bold')
     plt.tight_layout()
-    plt.savefig(os.path.join(out_dir, "fig5_coefficients.png"), dpi=180, bbox_inches='tight')
+    plt.savefig(os.path.join(out_dir, "fig5_coefficients.png"), dpi=300, bbox_inches='tight')
     plt.close(); print("  -> fig5_coefficients")
 
     fig, axes = plt.subplots(1, 3, figsize=(16, 4))
@@ -1007,18 +1008,18 @@ def make_all_figures(model, hist, loco_results, all_data_by_re, out_dir=None):
         f = sp.lambdify((sp.Symbol('x'), sp.Symbol('t'), sp.Symbol('Re')), res['expr'], modules='numpy')
         y_pred = f(td[:, 0], td[:, 1], td[:, 2])
         y_true = td[:, 3]
-        ax.scatter(y_true, y_pred, s=3, alpha=0.4, color=colors[str(test_Re)])
+        ax.scatter(y_true, y_pred, s=3, alpha=0.4, color=re_col[test_Re], marker=re_mk[test_Re])
         m = min(y_true.min(), y_pred.min()); M = max(y_true.max(), y_pred.max())
-        ax.plot([m, M], [m, M], 'r--', lw=1)
-        ax.set_xlabel('U_lid PINN'); ax.set_ylabel('U_lid SR')
+        ax.plot([m, M], [m, M], 'k--', lw=1)
+        ax.set_xlabel('$U_{lid}$ PINN (–)'); ax.set_ylabel('$U_{lid}$ SR (–)')
         ax.set_title(f'LOCO Re={test_Re}  R²={res["r2_test"]:.4f}')
         expr_s = res['expr'][:42] + '...' if len(res['expr']) > 42 else res['expr']
         ax.annotate(f'SR: {expr_s}', xy=(0.02, 0.03),
                     xycoords='axes fraction', fontsize=6.5, color='#333')
         ax.grid(True, alpha=0.3)
-    fig.suptitle('Ultra PINN — Validation LOCO', fontweight='bold')
+    fig.suptitle('Ultra PINN — LOCO validation', fontweight='bold')
     plt.tight_layout()
-    plt.savefig(os.path.join(out_dir, "fig6_loco.png"), dpi=180, bbox_inches='tight')
+    plt.savefig(os.path.join(out_dir, "fig6_loco.png"), dpi=300, bbox_inches='tight')
     plt.close(); print("  -> fig6_loco")
 
     fig, axes = plt.subplots(1, 3, figsize=(16, 4))
@@ -1040,19 +1041,19 @@ def make_all_figures(model, hist, loco_results, all_data_by_re, out_dir=None):
         v = v_n.cpu().numpy().reshape(n, n)
         spd = np.sqrt(u**2 + v**2)
         strm = ax.streamplot(xs, ys, u, v, color=spd,
-                              cmap='viridis', density=1.4, linewidth=0.8)
-        plt.colorbar(strm.lines, ax=ax, label='|u|')
+                              cmap='Greys', density=1.4, linewidth=0.8)
+        plt.colorbar(strm.lines, ax=ax, label='$|u|$ (–)')
         ax.set_title(f'Re={Re}  (t=0.5)')
-        ax.set_xlabel('x'); ax.set_ylabel('y')
-    fig.suptitle('Ultra PINN — Champs de vitesse sous controle identifie par PINN',
+        ax.set_xlabel('$x$ (–)'); ax.set_ylabel('$y$ (–)')
+    fig.suptitle('Ultra PINN — velocity fields under PINN-identified control',
                  fontweight='bold')
     plt.tight_layout()
-    plt.savefig(os.path.join(out_dir, "fig7_velocity.png"), dpi=180, bbox_inches='tight')
+    plt.savefig(os.path.join(out_dir, "fig7_velocity.png"), dpi=300, bbox_inches='tight')
     plt.close(); print("  -> fig7_velocity")
 
     fig, ax = plt.subplots(figsize=(14, 3))
     ax.axis('off')
-    rows_t = [['Re test', 'MSE LOCO', 'R2 LOCO', 'Expression SR']]
+    rows_t = [['Re (–)', 'MSE LOCO', 'R² LOCO', 'SR expression']]
     for Re in RE_LIST:
         res = loco_results[Re]
         expr = res['expr']
@@ -1076,25 +1077,25 @@ def make_all_figures(model, hist, loco_results, all_data_by_re, out_dir=None):
             cell.set_facecolor('#f8f8f8')
         if c == 3:
             cell.set_width(0.5)
-    ax.set_title('Ultra PINN — Expressions SR (LOCO)', fontweight='bold', pad=12)
+    ax.set_title('Ultra PINN — symbolic-regression expressions (LOCO)', fontweight='bold', pad=12)
     plt.tight_layout()
-    plt.savefig(os.path.join(out_dir, "fig8_sr_table.png"), dpi=180, bbox_inches='tight')
+    plt.savefig(os.path.join(out_dir, "fig8_sr_table.png"), dpi=300, bbox_inches='tight')
     plt.close(); print("  -> fig8_sr_table")
 
     fig = plt.figure(figsize=(20, 9))
     gs = gridspec.GridSpec(2, 4, figure=fig, hspace=0.42, wspace=0.35,
                              left=0.05, right=0.97, top=0.92, bottom=0.08)
     ax = fig.add_subplot(gs[0, 0])
-    ax.semilogy(hist['total'], color='#2C2C2A', lw=1.5, label='Total')
-    ax.semilogy(hist['pde'],   color='#185FA5', ls='--', lw=1, label='PDE')
-    ax.set_xlabel('Ep.'); ax.set_ylabel('Loss'); ax.set_title('Convergence')
-    ax.legend(fontsize=7); ax.grid(True, alpha=0.25)
+    ax.semilogy(hist['total'], color='k', lw=1.5, label='Total')
+    ax.semilogy(hist['pde'],   color='0.45', ls='--', lw=1, label='PDE')
+    ax.set_xlabel('Epoch (–)'); ax.set_ylabel('Loss (–)'); ax.set_title('Convergence')
+    ax.legend(fontsize=8); ax.grid(True, alpha=0.3)
 
     ax = fig.add_subplot(gs[0, 1])
-    ax.plot(np.array(hist['energy'])/_n_re, color='#BA7517', lw=1.5)
-    ax.axhline(E_TARGET, color='#BA7517', ls='--', lw=1, alpha=0.6, label=f'E_target={E_TARGET}')
-    ax.set_xlabel('Ep.'); ax.set_ylabel('Energie moy.'); ax.set_title('Convergence energie')
-    ax.legend(fontsize=7); ax.grid(True, alpha=0.25)
+    ax.plot(np.array(hist['energy'])/_n_re, color='k', lw=1.5)
+    ax.axhline(E_TARGET, color='0.5', ls='--', lw=1, alpha=0.8, label=f'E_target={E_TARGET}')
+    ax.set_xlabel('Epoch (–)'); ax.set_ylabel('Mean energy (–)'); ax.set_title('Energy convergence')
+    ax.legend(fontsize=8); ax.grid(True, alpha=0.3)
 
     x_grid_plot = np.linspace(0, _lx, 300)
     Xp_plot = torch.tensor(x_grid_plot[:, None], dtype=DTYPE, device=device)
@@ -1106,10 +1107,10 @@ def make_all_figures(model, hist, loco_results, all_data_by_re, out_dir=None):
             with torch.no_grad():
                 Up_plot = model.U_lid(Xp_plot, Tp_plot, Re_t_plot).cpu().numpy().ravel()
             ax.plot(x_grid_plot, Up_plot, ls=ls, alpha=0.8, label=f't={t_val:.2f}',
-                    color=colors[str(Re)])
+                    color=re_col[Re], marker=re_mk[Re], markevery=40)
         ax.axhline(0, color='gray', lw=0.6, ls=':')
-        ax.set_xlabel('x'); ax.set_ylabel('U_lid'); ax.set_title(f'Profils Re={Re}')
-        ax.legend(fontsize=6); ax.grid(True, alpha=0.25)
+        ax.set_xlabel('$x$ (–)'); ax.set_ylabel('$U_{lid}$ (–)'); ax.set_title(f'Re={Re}')
+        ax.legend(fontsize=7); ax.grid(True, alpha=0.3)
 
     for col, test_Re in enumerate(RE_LIST):
         ax = fig.add_subplot(gs[1, col])
@@ -1119,28 +1120,28 @@ def make_all_figures(model, hist, loco_results, all_data_by_re, out_dir=None):
         f = sp.lambdify((sp.Symbol('x'), sp.Symbol('t'), sp.Symbol('Re')), res['expr'], modules='numpy')
         yp_ = f(td[:, 0], td[:, 1], td[:, 2])
         yt_ = td[:, 3]
-        ax.scatter(yt_, yp_, s=2, alpha=0.35, color=colors[str(test_Re)])
+        ax.scatter(yt_, yp_, s=3, alpha=0.4, color=re_col[test_Re], marker=re_mk[test_Re])
         m_ = min(yt_.min(), yp_.min()); M_ = max(yt_.max(), yp_.max())
-        ax.plot([m_, M_], [m_, M_], 'r--', lw=0.8)
-        ax.set_title(f'LOCO Re={test_Re}  R2={res["r2_test"]:.3f}')
-        ax.set_xlabel('PINN'); ax.set_ylabel('SR')
-        ax.grid(True, alpha=0.25)
+        ax.plot([m_, M_], [m_, M_], 'k--', lw=0.8)
+        ax.set_title(f'LOCO Re={test_Re}  R²={res["r2_test"]:.3f}')
+        ax.set_xlabel('$U_{lid}$ PINN (–)'); ax.set_ylabel('$U_{lid}$ SR (–)')
+        ax.grid(True, alpha=0.3)
 
     ax = fig.add_subplot(gs[1, 3])
     if mask.sum() > 2:
-        ax.loglog(Re_scan[mask], U_mid[mask], 'o-', color='#185FA5', lw=1.8, ms=5)
-        ax.loglog(Re_fit, C * Re_fit**alpha_pow, '--', color='#D85A30',
-                  lw=1.5, label=f'Re^{{{alpha_pow:.2f}}}')
+        ax.loglog(Re_scan[mask], U_mid[mask], 'ko-', lw=1.8, ms=5)
+        ax.loglog(Re_fit, C * Re_fit**alpha_pow, '--', color='0.45',
+                  lw=1.5, label=f'$Re^{{{alpha_pow:.2f}}}$')
         ax.legend(fontsize=8)
-    ax.set_xlabel('Re'); ax.set_ylabel('U_lid(0.5,0.5)')
-    ax.set_title('Loi de puissance en Re'); ax.grid(True, which='both', alpha=0.25)
+    ax.set_xlabel('$Re$ (–)'); ax.set_ylabel('$U_{lid}(0.5, 0.5)$ (–)')
+    ax.set_title('Power law in Re'); ax.grid(True, which='both', alpha=0.3)
 
     fig.suptitle(
-        'Ultra PINN — Controle actif de cavite entrainee\n'
-        'Loi de controle universelle U_lid(x,t,Re) + Regression Symbolique',
+        'Ultra PINN — active control of driven cavity\n'
+        'Universal lid law $U_{lid}(x,t,Re)$ + symbolic regression',
         fontsize=13, fontweight='bold'
     )
-    plt.savefig(os.path.join(out_dir, "fig9_synthesis.png"), dpi=180, bbox_inches='tight')
+    plt.savefig(os.path.join(out_dir, "fig9_synthesis.png"), dpi=300, bbox_inches='tight')
     plt.close(); print("  -> fig9_synthesis")
 
 
@@ -1373,19 +1374,19 @@ def run_energy_sweep():
     m2_fracs  = [r["mode2_fraction"] for r in results_rows]
     a2_vals   = [r["A20"] for r in results_rows]
 
-    axes[0].plot(e_targets, m2_fracs, 'o-', lw=2, color='#185FA5')
-    axes[0].set_xlabel('E_target'); axes[0].set_ylabel('Mode-2 fraction')
-    axes[0].set_title('E_target vs Mode-2 Fraction'); axes[0].grid(True, alpha=0.3)
+    axes[0].plot(e_targets, m2_fracs, 'ko-', lw=2, ms=6)
+    axes[0].set_xlabel('$E_{target}$ (–)'); axes[0].set_ylabel('Mode-2 fraction (–)')
+    axes[0].set_title('Mode-2 fraction vs energy target'); axes[0].grid(True, alpha=0.3)
 
-    axes[1].plot(e_targets, a2_vals, 's-', lw=2, color='#D85A30')
-    axes[1].set_xlabel('E_target'); axes[1].set_ylabel('A2 (mode 2 amplitude)')
-    axes[1].set_title('E_target vs A2'); axes[1].grid(True, alpha=0.3)
+    axes[1].plot(e_targets, a2_vals, 'ks-', lw=2, ms=6)
+    axes[1].set_xlabel('$E_{target}$ (–)'); axes[1].set_ylabel('$A_2$ (–)')
+    axes[1].set_title('$A_2$ vs energy target'); axes[1].grid(True, alpha=0.3)
 
     plt.tight_layout()
-    plt.savefig(os.path.join(out_dir, "energy_sweep_plot.png"), dpi=180, bbox_inches='tight')
+    plt.savefig(os.path.join(out_dir, "energy_sweep_plot.png"), dpi=300, bbox_inches='tight')
     plt.close()
 
-    print(f"\n  Resultats sauvegardes dans {out_dir}/energy_sweep.csv")
+    print(f"\n  Results saved in {out_dir}/energy_sweep.csv")
     return results_rows
 
 
