@@ -29,7 +29,7 @@ This document collects the supplementary figures and tables that support the mai
 
 \section{Network architecture sweep}\label{ssec:archtable}
 
-Table~S1 complements the architecture column of Table~6 of the main text with the realized energies, parameter counts, and temporal fractions of the small and large networks. All runs are at $\re=500$ with the Fourier basis, three independent seeds per architecture, and $E^*=0.25$. The seed of the baseline network that coincides with the intermediate branch of Table~4 is excluded from the reported range.
+Table~S1 complements the architecture column of the architecture-robustness table of the main text with the realized energies, parameter counts, and temporal fractions of the small and large networks. All runs are at $\re=500$ with the Fourier basis, three independent seeds per architecture, and $E^*=0.25$. The seed of the baseline network that coincides with the intermediate branch of the main-text seed study is excluded from the reported range.
 
 \begin{table}[h]
 \centering
@@ -46,9 +46,9 @@ Large $[256,256,128,96]$  & 139624  & 0.252--0.257 & 86.7--92.2 & $\lesssim$5 \\
 \end{tabular}
 \end{table}
 
-$^{*}$Excluding the seed associated with the intermediate branch of Table~4 of the main text.
+$^{*}$Excluding the seed associated with the intermediate branch of the main-text seed study.
 
-The architecture sweep confirms that the second-mode dominance is not tied to a particular network capacity. Both the smallest and the largest networks considered converge to a second-mode-dominant state with $f_2$ in the high-80s to low-90s percentile, consistent with the baseline network used throughout the main text. The parameter count varies by more than an order of magnitude across the three architectures.
+The architecture sweep shows that the Mode-2 branch can be recovered across the three tested network capacities. Both the smallest and the largest networks considered converge to a second-mode-dominant state with $f_2$ in the high-80s to low-90s percentile, consistent with the baseline network used throughout the main text. The parameter count varies by more than an order of magnitude across the three architectures.
 
 \section{Velocity and dissipation fields}
 
@@ -92,7 +92,7 @@ Figure~S4 shows the centerline velocity profiles of the realized flows under the
 
 \section{Modal spectra at $\re=100$, $500$, and $1000$}
 
-Figures~S5--S7 show the spatial and temporal spectra of the recovered Fourier control at the three Reynolds numbers. In every case the spatial spectrum peaks at the second spatial mode; the temporal content is nearly flat at $\re=100$ and $500$ and becomes more pronounced at $\re=1000$, consistent with the main-text discussion of the mode-2 energy fraction.
+Figures~S5--S7 show the spatial and temporal spectra of the recovered Fourier control at the three Reynolds numbers. In every case the second spatial mode is the largest individual contribution to the spatial spectrum; the temporal content is nearly flat at $\re=100$ and $500$ and becomes more pronounced at $\re=1000$, consistent with the main-text discussion of the mode-2 energy fraction.
 
 \begin{figure}[h]
 \centering
@@ -111,13 +111,13 @@ Figures~S5--S7 show the spatial and temporal spectra of the recovered Fourier co
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/si_spectra_Re1000.png}
-\caption{Modal spectra of the recovered control at $\re=1000$. The spatial spectrum still peaks at the second spatial mode, while the temporal content is more pronounced than at lower Reynolds number.}
+\caption{Modal spectra of the recovered control at $\re=1000$. The second spatial mode remains the largest individual spatial contribution, while the temporal content is more pronounced than at lower Reynolds number.}
 \label{fig:s7}
 \end{figure}
 
 \section{Temporal response under the time-dependent Fourier control}
 
-The admissibility test of the main text rests on the temporal behavior of the realized flows under the time-dependent ($t$-dependent) controls. Figures~S8--S10 show the LBM response to the periodic Fourier (PINN) control at the three Reynolds numbers: the fields at the phase of maximum forcing, a probe time series of the kinetic energy, and the spectra of the fluctuation content. The realizations are quasi-stationary: the fluctuation amplitude remains below $1\%$ of the total kinetic energy at every Reynolds number.
+The admissibility test of the main text rests on the temporal behavior of the realized flows under the time-dependent ($t$-dependent) controls. Figures~S8--S10 show the LBM response to the periodic Fourier (PINN) control at the three Reynolds numbers: the fields at the phase of maximum forcing, a probe time series of the kinetic energy, and the spectra of the fluctuation content. The realizations are quasi-stationary: the fluctuation amplitude remains below $1\%$ of the mean-flow kinetic energy at every Reynolds number.
 
 \begin{figure}[h]
 \centering
@@ -165,14 +165,14 @@ Figures~S11--S13 show the corresponding realization under the time-dependent mod
 \label{fig:s13}
 \end{figure}
 
-\section{Global temporal lock-in of all tested controls}
+\section{Temporal response of all tested controls}
 
 Figure~S14 collects the time series and fluctuation content of the LBM realizations under all tested controls at the three Reynolds numbers, including the uniform, $\sin(\pi x)$, $A_2\sin(2\pi x)$, PINN mean, and time-dependent Fourier and modified-Chebyshev profiles. The Fourier-related profiles settle into quasi-stationary states, whereas the modified-Chebyshev profile remains strongly time-dependent.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/fig11_branches.png}
-\caption{Global temporal behavior of the LBM realizations under all tested lid controls at $\re=100$, $500$, and $1000$. The time-dependent Fourier branch (PINN $t$-dependent) is quasi-stationary, while the modified-Chebyshev branch remains strongly time-dependent.}
+\caption{Global temporal response of the LBM realizations under all tested lid controls at $\re=100$, $500$, and $1000$. The time-dependent Fourier branch (PINN $t$-dependent) is quasi-stationary, while the modified-Chebyshev branch remains strongly time-dependent.}
 \label{fig:s14}
 \end{figure}
 
