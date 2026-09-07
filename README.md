@@ -126,12 +126,13 @@ Indicative run times (CPU, 5 threads): baseline 6×5 ≈ 1 h; `architecture` lar
 
 ## 6. License
 
-This software is distributed under the **Apache License, Version 2.0**.
-See [LICENSE](LICENSE) for the full text and [NOTICE](NOTICE) for the
-required attribution statement.
-
 Copyright 2026 Ahmed Beniaiche, Laboratory of Fluid Mechanics,
 Ecole Militaire Polytechnique, Algiers, Algeria.
+
+The Software is provided solely for non-commercial research, educational, academic, and personal purposes.
+Any commercial use of the Software, including but not limited to use in a commercial product, service, consulting activity, industrial application, proprietary software, or revenue-generating activity, is strictly prohibited without the prior written permission of the copyright holder, Ahmed Beniaiche.
+Any scientific publication, conference paper, thesis, dissertation, technical report, dataset, presentation, or other scholarly work that uses or substantially relies upon the Software must appropriately acknowledge the author and cite the associated scientific publication.
+The copyright and attribution notices contained in the Software must not be removed or altered.
 
 ## 7. Citation
 
