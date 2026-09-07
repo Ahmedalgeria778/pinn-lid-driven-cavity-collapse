@@ -174,7 +174,7 @@ def main():
         ax.bar(xp + (i - 0.5) * w, vals, w, color=TEMP_FILL[ctrl], edgecolor="k",
                hatch=TEMP_HATCH[ctrl], label=PROFILE_LABEL[ctrl])
     ax.set_xticks(xp); ax.set_xticklabels([f"Re={r}" for r in RE_LIST], color="k", fontsize=11)
-    ax.axhline(0.1, color="0.35", ls=":", lw=1.2)
+    ax.axhline(0.01, color="0.35", ls=":", lw=1.2, label="$R_K$ = 1% threshold")
     style_axes(ax, xl="Re (–)", yl=r"$K_{fluct}/K$ (–)",
                title="Weight of time fluctuations (branches)", fs=13)
     legend(ax, fs=10)

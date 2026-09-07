@@ -20,9 +20,15 @@
 
 \title{\large Supplementary material:\\ Physics-informed identification and independent numerical verification of conditional modal collapse in active control of lid-driven cavity flow}
 
-\author{Ahmed Beniaiche}
+\author{Ahmed Beniaiche, Abderrahim Larabi, Abderrahim Dourari, and Mbarek Belkadi}
 
 \date{}
+
+\footnotetext{Ahmed Beniaiche and Abderrahim Larabi: Laboratory of Fluid Mechanics, \'Ecole Militaire Polytechnique, Algiers, Algeria.}
+
+\footnotetext{Abderrahim Dourari and Mbarek Belkadi: Laboratory of Turbomachinery, \'Ecole Militaire Polytechnique, Algiers, Algeria.}
+
+\footnotetext{Corresponding author: \texttt{beniaiche\_ahmed25@yahoo.fr}.}
 
 \begin{document}
 
@@ -34,7 +40,7 @@ This document collects the supplementary figures and tables that support the mai
 
 Table~S1 complements the architecture-robustness table of Section~\ref{sec:archmode} of the main text with the realized energies, parameter counts, and temporal fractions of the small and large networks. All runs are at $\re=500$ with the Fourier basis, three independent seeds per architecture, and $E^*=0.25$. The seed of the baseline network that coincides with the intermediate branch of the main-text seed study (Section~\ref{sec:seeds}) is excluded from the reported range.
 
-\begin{table}[h]
+\begin{table}[ht]
 \centering
 \caption{Network architecture sweep at $\re=500$, Fourier basis, three seeds per architecture. $n_{\mathrm{par}}$: number of trainable parameters; $E_r$: realized-energy range; $f_2$: second-mode fraction range; $f_t$: temporal fraction range.}
 \label{tab:s1}
@@ -55,16 +61,16 @@ The architecture sweep shows that the Mode-2 branch can be recovered across the 
 
 \section{Velocity and dissipation fields}
 
-Figures~S1 and~S2 show the velocity magnitude and the viscous dissipation fields of the controlled flow at $\re=100$, $500$, and $1000$, for the Fourier branch recovered in the main text, as realized by the independent LBM solver. The dissipation is displayed in the normalized form of Eq.~\eqref{eq:diss} of the main text. The central circulation produced by the dominant second spatial mode and the corresponding dissipation concentration are apparent.
+Figures~S1 and~S2 show the velocity magnitude and the viscous dissipation fields of the controlled flow at $\re=100$, $500$, and $1000$, for the Fourier branch recovered in the main text, as realized by the independent LBM solver. The dissipation-density field $\Phi$ of Eq.~\eqref{eq:phi} of the main text is displayed. The central circulation produced by the dominant second spatial mode and the corresponding dissipation concentration are apparent.
 
-\begin{figure}[h]
+\begin{figure}[ht]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/si_velocity_fields.png}
 \caption{Velocity fields of the Fourier branch at $\re=100$, $500$, and $1000$ realized in the LBM solver. Color denotes the velocity magnitude; streamlines trace the central circulation set up by the dominant second spatial mode.}
 \label{fig:s1}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[ht]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/si_dissipation_fields.png}
 \caption{Viscous dissipation fields of the Fourier branch at $\re=100$, $500$, and $1000$ realized in the LBM solver. The dissipation is concentrated in the shear layers set up by the forced motion.}
@@ -75,7 +81,7 @@ Figures~S1 and~S2 show the velocity magnitude and the viscous dissipation fields
 
 The main-text admissibility discussion refers to the modal content of the mean fields realized under the identified control. Figure~S3 reports the Fourier analysis of the vertical-centerline velocity $u(0.5,y)$ of the LBM-realized flows under the complete PINN control and its dominant-mode truncation $A_2\sin(2\pi x)$, at the three Reynolds numbers.
 
-\begin{figure}[h]
+\begin{figure}[ht]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/si_modal_analysis.png}
 \caption{Modal analysis of the vertical-centerline velocity $u(0.5,y)$ of the LBM-realized flows under the PINN (mean) and $A_2\sin(2\pi x)$ lid profiles at $\re=100$, $500$, and $1000$. The mean flow of the Fourier branch is dominated by the second spatial contribution, consistent with the structure of the identified control.}
@@ -86,7 +92,7 @@ The main-text admissibility discussion refers to the modal content of the mean f
 
 Figure~S4 shows the centerline velocity profiles of the realized flows under the four tested lid profiles at the three Reynolds numbers.
 
-\begin{figure}[h]
+\begin{figure}[ht]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/si_centerline_profiles.png}
 \caption{Centerline velocity profiles $u(0.5,y)$ (left) and $v(x,0.5)$ (right) of the LBM-realized flows at $\re=100$, $500$, and $1000$, under the uniform, $\sin(\pi x)$, $A_2\sin(2\pi x)$, and PINN (mean) lid profiles.}
@@ -97,21 +103,21 @@ Figure~S4 shows the centerline velocity profiles of the realized flows under the
 
 Figures~S5--S7 show the spatial and temporal spectra of the recovered Fourier control at the three Reynolds numbers. In every case the second spatial mode is the largest individual contribution to the spatial spectrum; the temporal content is nearly flat at $\re=100$ and $500$ and becomes more pronounced at $\re=1000$, consistent with the main-text discussion of the mode-2 energy fraction.
 
-\begin{figure}[h]
+\begin{figure}[ht]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/si_spectra_Re100.png}
 \caption{Modal spectra of the recovered control at $\re=100$. The spatial spectrum is dominated by the second spatial mode; the temporal spectrum is essentially flat and small.}
 \label{fig:s5}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[ht]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/si_spectra_Re500.png}
 \caption{Modal spectra of the recovered control at $\re=500$. The spatial spectrum still peaks at the second spatial mode with a small temporal content.}
 \label{fig:s6}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[ht]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/si_spectra_Re1000.png}
 \caption{Modal spectra of the recovered control at $\re=1000$. The second spatial mode remains the largest individual spatial contribution, while the temporal content is more pronounced than at lower Reynolds number.}
@@ -120,9 +126,9 @@ Figures~S5--S7 show the spatial and temporal spectra of the recovered Fourier co
 
 \section{Temporal response under the time-dependent Fourier control}
 
-The admissibility test of the main text (Section~\ref{sec:stationarity}) rests on the fluctuating-to-mean-flow kinetic-energy ratio $R_K$ of Eq.~\eqref{eq:rk}, evaluated on the temporal behavior of the realized flows under the time-dependent ($t$-dependent) controls. Figures~S8--S10 show the LBM response to the periodic Fourier (PINN) control at the three Reynolds numbers: the fields at the phase of maximum forcing, a probe time series of the kinetic energy, and the spectra of the fluctuation content. The realizations are quasi-stationary: the fluctuation amplitude remains below $1\%$ of the mean-flow kinetic energy at every Reynolds number. Table~S2 reports the kinetic-energy diagnostics of these realizations and of the modified-Chebyshev ones. The very large ratio $R_K=847\%$ at $\re=100$ for the Chebyshev control originates from the small denominator $K_{\mathrm{mean}}\simeq9\times10^{-5}$, about two orders of magnitude below the Fourier values, rather than from an anomalously large fluctuation amplitude.
+The admissibility test of the main text (Section~\ref{sec:fourier_admis}) rests on the fluctuating-to-mean-flow kinetic-energy ratio $R_K$ of Eq.~\eqref{eq:rk}, evaluated on the temporal behavior of the realized flows under the time-dependent ($t$-dependent) controls, with the operational criterion of Eq.~\eqref{eq:rkcriterion} of the main text. Figures~S8--S10 show the LBM response to the periodic Fourier (PINN) control at the three Reynolds numbers: the fields at the phase of maximum forcing, a probe time series of the kinetic energy, and the spectra of the fluctuation content. The realizations are quasi-stationary: the fluctuation amplitude remains below $1\%$ of the mean-flow kinetic energy at every Reynolds number. Table~S2 reports the kinetic-energy diagnostics of these realizations and of the modified-Chebyshev ones. The very large ratio $R_K=847\%$ at $\re=100$ for the Chebyshev control originates from the small denominator $K_{\mathrm{mean}}\simeq9\times10^{-5}$, about two orders of magnitude below the Fourier values, rather than from an anomalously large fluctuation amplitude.
 
-\begin{table}[h]
+\begin{table}[ht]
 \centering
 \caption{Kinetic-energy diagnostics of the LBM realizations under the time-dependent Fourier (PINN) and modified-Chebyshev controls at $\re=100$, $500$, and $1000$. $K_{\mathrm{mean}}$: kinetic energy of the time-averaged flow; $K_{\mathrm{fluct}}$: time-averaged fluctuation kinetic energy; $R_K=K_{\mathrm{fluct}}/K_{\mathrm{mean}}$.}
 \label{tab:s2}
@@ -143,21 +149,21 @@ Control & $\re$ & $K_{\mathrm{mean}}$ & $K_{\mathrm{fluct}}$ & $R_K$ (\%) \\
 \end{tabular}
 \end{table}
 
-\begin{figure}[h]
+\begin{figure}[ht]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/si_pinn_t_Re100.png}
 \caption{Temporal response of the LBM realization to the time-dependent Fourier (PINN) control at $\re=100$.}
 \label{fig:s8}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[ht]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/si_pinn_t_Re500.png}
 \caption{Temporal response of the LBM realization to the time-dependent Fourier (PINN) control at $\re=500$.}
 \label{fig:s9}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[ht]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/si_pinn_t_Re1000.png}
 \caption{Temporal response of the LBM realization to the time-dependent Fourier (PINN) control at $\re=1000$.}
@@ -168,21 +174,21 @@ Control & $\re$ & $K_{\mathrm{mean}}$ & $K_{\mathrm{fluct}}$ & $R_K$ (\%) \\
 
 Figures~S11--S13 show the corresponding realization under the time-dependent modified-Chebyshev control. In contrast to the Fourier case, the fluctuations dominate the kinetic energy at every Reynolds number, and the realized mean-flow kinetic energy is small relative to the fluctuation contribution (Table~S2). These runs provide the quantitative basis of the failure of this branch under the adopted admissibility test.
 
-\begin{figure}[h]
+\begin{figure}[ht]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/si_cheb_t_Re100.png}
 \caption{Temporal response of the LBM realization to the time-dependent modified-Chebyshev control at $\re=100$.}
 \label{fig:s11}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[ht]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/si_cheb_t_Re500.png}
 \caption{Temporal response of the LBM realization to the time-dependent modified-Chebyshev control at $\re=500$.}
 \label{fig:s12}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[ht]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/si_cheb_t_Re1000.png}
 \caption{Temporal response of the LBM realization to the time-dependent modified-Chebyshev control at $\re=1000$.}
@@ -193,7 +199,7 @@ Figures~S11--S13 show the corresponding realization under the time-dependent mod
 
 Figure~S14 collects the time series and fluctuation content of the LBM realizations under all tested controls at the three Reynolds numbers, including the uniform, $\sin(\pi x)$, $A_2\sin(2\pi x)$, PINN mean, and time-dependent Fourier and modified-Chebyshev profiles. The Fourier-related profiles settle into quasi-stationary states, whereas the modified-Chebyshev profile remains strongly time-dependent.
 
-\begin{figure}[h]
+\begin{figure}[ht]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/fig11_branches.png}
 \caption{Global temporal response of the LBM realizations under all tested lid controls at $\re=100$, $500$, and $1000$. The time-dependent Fourier branch (PINN $t$-dependent) is quasi-stationary, while the modified-Chebyshev branch remains strongly time-dependent.}
