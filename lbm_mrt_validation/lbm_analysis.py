@@ -180,14 +180,21 @@ def main():
     legend(ax, fs=10)
     # (d) Dominant modes: mean field vs fluctuations
     ax = axs[1, 1]
+    markers_mean = {"pinn_t": "o", "cheb_t": "s"}
+    markers_fluct = {"pinn_t": "^", "cheb_t": "D"}
+    ls_mean = {"pinn_t": "-", "cheb_t": "-"}
+    ls_fluct = {"pinn_t": "--", "cheb_t": ":"}
     for i, ctrl in enumerate(TEMPORAL):
         mm = [next((r["mode_dom"] for r in res_t if r["Re"] == Re and r["control"] == ctrl),
                    np.nan) for Re in RE_LIST]
         mf = [next((r["mode_dom_fluct"] for r in res_t if r["Re"] == Re and r["control"] == ctrl),
                    np.nan) for Re in RE_LIST]
-        ax.plot(xp + (i - 0.5) * 0.3, mm, "o-", color="k", label=PROFILE_LABEL[ctrl] + " (mean)")
-        ax.plot(xp + (i - 0.5) * 0.3, mf, "s--", color="0.4", ms=6,
-                label=PROFILE_LABEL[ctrl] + " (fluct.)")
+        ax.plot(xp + (i - 0.5) * 0.3, mm,
+                marker=markers_mean[ctrl], color="k", ls=ls_mean[ctrl],
+                lw=2, ms=8, label=PROFILE_LABEL[ctrl] + " (mean)")
+        ax.plot(xp + (i - 0.5) * 0.3, mf,
+                marker=markers_fluct[ctrl], color="0.45", ls=ls_fluct[ctrl],
+                lw=1.8, ms=7, label=PROFILE_LABEL[ctrl] + " (fluct.)")
     ax.set_xticks(xp); ax.set_xticklabels([f"Re={r}" for r in RE_LIST], color="k", fontsize=11)
     ax.set_ylim(0, 11)
     style_axes(ax, xl="Re (–)", yl="Dominant mode index (–)",

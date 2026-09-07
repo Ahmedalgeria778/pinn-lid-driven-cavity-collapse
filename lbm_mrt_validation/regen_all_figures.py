@@ -436,29 +436,29 @@ for prof in TEMPORAL_CONTROLS:
 print("   -> fig10_<control>_Re<Re>_temporal.png  (fields + probe + phases)")
 
 # ============================================================================
-# Figure 11 : spectra lock-in (all temporal cases), line style per Re
+# Figure 11 : spectra lock-in — one figure per Re (1×2 each)
 # ============================================================================
-fig = plt.figure(figsize=(13, 10.5))
-gs = gridspec.GridSpec(len(RE_LIST), len(TEMPORAL_CONTROLS), figure=fig,
-                        hspace=0.65, wspace=0.35,
-                        left=0.08, right=0.97, top=0.93, bottom=0.06)
+fig11_idx = 0
 for ri, Re in enumerate(RE_LIST):
+    fig11_idx += 1
+    fig, axes = plt.subplots(1, 2, figsize=(13, 4.8))
     for ci, prof in enumerate(TEMPORAL_CONTROLS):
-        ax = fig.add_subplot(gs[ri, ci])
+        ax = axes[ci]
         sol = temporal_results[Re][prof]
         seg = sol.probe[-16384:]
         spec = np.abs(np.fft.rfft(seg - seg.mean()))
         freq = np.fft.rfftfreq(len(seg)) * sol.period
-        ax.semilogy(freq[1:], spec[1:], color='k', lw=1.2, ls=RE_LS[Re])
-        ax.axvline(1.0, color='0.35', ls='--', lw=1.2)
+        ax.semilogy(freq[1:], spec[1:], color='k', lw=1.3)
+        ax.axvline(1.0, color='0.35', ls='--', lw=1.2, label='$f_{forced}$')
         ax.set_xlim(0, 2.5)
         ax.axhline(0.05 * spec.max(), color='0.6', ls=':', lw=1)
         kk = sol.K_fluct / sol.K if sol.K > 0 else np.nan
-        ax.set_title(f'{PROFILE_LABEL[prof]} · Re={Re}\n$K_{{fluct}}/K$={kk:.1%}',
-                     color='k', fontsize=10, fontweight='bold', pad=6)
-        style_axes(ax, xl='$f/f_{forced}$ (–)', yl='$|FFT|$ (–)', fs=12, tick=10)
-figure_title(fig, 'All time-dependent branches lock on the forced frequency $f=1/P$')
-save_fig(fig, os.path.join(OUTDIR, 'fig11_temporal_lockin_all.png'))
-print("   -> fig11_temporal_lockin_all.png (global lock-in of all 6 cases)")
+        ax.set_title(f'{PROFILE_LABEL[prof]}\n$K_{{fluct}}/K$={kk:.1%}',
+                     color='k', fontsize=11, fontweight='bold', pad=6)
+        style_axes(ax, xl='$f/f_{forced}$ (–)', yl='$|FFT|$ (–)', fs=12, tick=11)
+        legend(ax, fs=9)
+    figure_title(fig, f'Spectra lock-in — Re={Re}')
+    save_fig(fig, os.path.join(OUTDIR, f'fig11{fig11_idx}_spectra_Re{Re}.png'))
+    print(f"   -> fig11{fig11_idx}_spectra_Re{Re}.png")
 
 print("\nALL FIGURES REGENERATED (white / B&W style).")
