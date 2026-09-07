@@ -16,6 +16,12 @@ manuscript/*.blg
 manuscript/*.toc
 manuscript/*Notes.bib
 
+# Latexdiff process artifacts
+manuscript/ldiff_*.txt
+manuscript/ldiff_*.tex
+manuscript/marked_raw.tex
+manuscript/manuscript_prev.tex
+
 # ── LBM: champs bruts régénérables (figures/analyse relancables) ──
 lbm_mrt_validation/fields/
 lbm_mrt_validation/gci_progress.csv
