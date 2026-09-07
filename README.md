@@ -10,7 +10,7 @@ U_lid(x,t,Re) = Σ_{i,j} c_{i,j}(Re) · sin((i+1)πx/Lx) · cos(jπt)
 
 (the "ULTRa" control basis: rich in spatial × temporal modes). The central scientific finding: the identified control **collapses onto the stationary second spatial mode (2,0)** = `sin(2πx/Lx)`, robustly across most modeling choices.
 
-**Authors**: Ahmed Beniaiche (Laboratory of Fluid Mechanics, École Militaire Polytechnique, Algiers), Abderrahim Larabi (Laboratory of Fluid Mechanics, École Militaire Polytechnique, Algiers), Abderrahim Dourari (Laboratory of Turbomachinery, École Militaire Polytechnique, Algiers), Mbarek Belkadi (Laboratory of Turbomachinery, École Militaire Polytechnique, Algiers). Corresponding author: Ahmed Beniaiche.
+**Author**: Ahmed Beniaiche (Laboratory of Fluid Mechanics, École Militaire Polytechnique, Algiers, Algeria). Corresponding author: Ahmed Beniaiche.
 
 ---
 
