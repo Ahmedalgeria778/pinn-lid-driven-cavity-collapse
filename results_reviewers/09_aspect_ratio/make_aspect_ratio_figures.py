@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Aspect-ratio analysis figures (R3.2, closed).
-Cavity 1:1 vs 2:1, Re=500, seed 42, E*=0.25, base 6x5 Fourier.
+Cavities 0.5:1 / 1:1 / 2:1, Re=500, seed 42, E*=0.25, base 6x5 Fourier.
 Generates:
   - fig_AR1_modal_structure.png  : A1/A2/A3 + f_(2,0), f_temp, E_total (bars)
   - fig_AR2_lid_profiles.png     : identified controls U_lid(s), s = x/Lx
@@ -27,9 +27,11 @@ from figure_style import style_axes, figure_title, legend, save_fig  # noqa: E40
 
 CSV = os.path.join(BASE, "aspect_ratio_results.csv")
 
-LABEL = {"square": "Square (1:1)", "rectangular": "Rectangular (2:1)"}
-GEO_HATCH = {"square": "", "rectangular": "///"}
-GEO_FILL = {"square": "#c8c8c8", "rectangular": "#ffffff"}
+GEO_LIST = ["short_rect", "square", "rectangular"]
+LABEL = {"short_rect": "Rectangular (0.5:1)", "square": "Square (1:1)",
+         "rectangular": "Rectangular (2:1)"}
+GEO_HATCH = {"short_rect": "///", "square": "", "rectangular": "..."}
+GEO_FILL = {"short_rect": "#ffffff", "square": "#c8c8c8", "rectangular": "#ffffff"}
 
 
 rows = {}
@@ -43,21 +45,20 @@ with open(CSV, newline="") as f:
 # ----------------------------------------------------------------------
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5.5))
 xpos = np.arange(3)
-w = 0.34
-for i, geo in enumerate(["square", "rectangular"]):
+w = 0.30
+for i, geo in enumerate(GEO_LIST):
     r = rows[geo]
     amps = [float(r[k]) for k in ("A10", "A20", "A30")]
-    ax1.bar(xpos + (i - 0.5) * w, amps, w, color=GEO_FILL[geo], edgecolor="k",
+    ax1.bar(xpos + (i - 1) * w, amps, w, color=GEO_FILL[geo], edgecolor="k",
             hatch=GEO_HATCH[geo], label=LABEL[geo])
 ax1.set_xticks(xpos)
 ax1.set_xticklabels(["$A_1$", "$A_2$", "$A_3$"], color="k", fontsize=12)
 style_axes(ax1, yl="Control amplitude (–)", title="Control coefficients $A_i = c_{i-1,0}$ (–)")
 legend(ax1, fs=10)
 
-geo = ["square", "rectangular"]
-f2 = [float(rows[g]["mode2_fraction"]) * 100 for g in geo]
-ft = [float(rows[g]["temporal_fraction"]) * 100 for g in geo]
-x2 = np.arange(2)
+f2 = [float(rows[g]["mode2_fraction"]) * 100 for g in GEO_LIST]
+ft = [float(rows[g]["temporal_fraction"]) * 100 for g in GEO_LIST]
+x2 = np.arange(3)
 ax2.bar(x2 - 0.19, ft, 0.38, color="#8a8a8a", edgecolor="k", hatch="...",
         label="$f_{temp}$ (%)")
 ax2.bar(x2 + 0.19, f2, 0.38, color="#ffffff", edgecolor="k", hatch="///",
@@ -66,13 +67,14 @@ for xi, (a, b) in enumerate(zip(f2, ft)):
     ax2.annotate(f"{a:.1f}%", (xi + 0.19, a + 0.8), color="k", fontsize=11, ha="center")
     ax2.annotate(f"{b:.1f}%", (xi - 0.19, b + 0.8), color="k", fontsize=11, ha="center")
 ax2.set_xticks(x2)
-ax2.set_xticklabels([LABEL[g] for g in geo], color="k", fontsize=12)
+ax2.set_xticklabels([LABEL[g] for g in GEO_LIST], color="k", fontsize=12)
 style_axes(ax2, yl="Energy fraction (%)",
-           title="Mode-2 collapse ($E_{{tot}}$ = {:.3f} vs {:.3f})".format(
-               float(rows["square"]["E_total"]), float(rows["rectangular"]["E_total"])))
+           title="Mode-2 collapse ($E_{{tot}}$ = {:.3f} / {:.3f} / {:.3f})".format(
+               *[float(rows[g]["E_total"]) for g in GEO_LIST]))
 legend(ax2, fs=10)
-figure_title(fig, "Aspect-ratio robustness (R3.2) — 1:1 vs 2:1 cavities (Re=500, seed 42): "
-             "Mode-2 collapse persists")
+figure_title(fig, "Aspect-ratio sensitivity (R3.2) — 0.5:1 / 1:1 / 2:1 cavities "
+                  "(Re=500, seed 42): mode 2 remains dominant, concentration peaks "
+                  "at the square geometry")
 save_fig(fig, os.path.join(BASE, "fig_AR1_modal_structure.png"))
 print("   -> fig_AR1_modal_structure.png")
 
@@ -83,8 +85,8 @@ print("   -> fig_AR1_modal_structure.png")
 #    3. reduced      A1 + A2 + A3  (3 modes, i = 0..2)
 # ----------------------------------------------------------------------
 s = np.linspace(0, 1, 400)
-fig, axes = plt.subplots(1, 2, figsize=(15, 5.5))
-for ax, geo in zip(axes, ["square", "rectangular"]):
+fig, axes = plt.subplots(1, 3, figsize=(19, 5.5))
+for ax, geo in zip(axes, GEO_LIST):
     r = rows[geo]
     A2 = float(r["A20"])
     cs = [float(r[f"c_{i}_0"]) for i in range(6)]
@@ -99,8 +101,8 @@ for ax, geo in zip(axes, ["square", "rectangular"]):
     style_axes(ax, xl="$s = x/L_x$ (–)", yl="$U_{lid}(s)$ (–)",
                title=f"{LABEL[geo]} ($A_2$ = {A2:.3f})")
     legend(ax, fs=10)
-figure_title(fig, "Identified controls 1:1 vs 2:1 — quasi-pure mode-2, geometry-invariant "
-             "(reconstructions of $U_{lid}$)")
+figure_title(fig, "Identified controls 0.5:1 / 1:1 / 2:1 — mode-2 remains dominant, "
+                  "concentration is geometry-dependent (reconstructions of $U_{lid}$)")
 save_fig(fig, os.path.join(BASE, "fig_AR2_lid_profiles.png"))
 print("   -> fig_AR2_lid_profiles.png")
 print("Aspect-ratio figures OK (white / B&W style).")
