@@ -47,7 +47,7 @@ PoF_R_lid_driven_paper/
 | `08_temporal` (n_t = 1, 3, 5) | number of temporal modes | **89.2–92.3 %**, f_t ≤ 1.5 % |
 | `09_architecture` (small/baseline/large) | network capacity (9k→140k params) | **86.7–93.6 %** (new runs; intra-seed Δf2 ≤ ±4 % on the mode-2 branch) |
 | `13_parametrization` (3 Re × 2 bases) | basis family × Reynolds | Fourier: **0.92 / 0.92 / 0.64** at Re=100/500/1000; Chebyshev_mod: **≤0.06 (all Re, temporal (0,1) branch)** |
-| `09_aspect_ratio` (1:1 vs 2:1, Re=500) | cavity aspect ratio | square **0.922** vs rectangular **0.912** → collapse persists (geometric robustness, R3.2 closed) |
+| `09_aspect_ratio` (0.5:1 / 1:1 / 2:1, Re=500) | cavity aspect ratio | square **0.922** vs 2:1 **0.912** vs 0.5:1 **0.699** — mode 2 remains dominant; concentration is geometry-dependent (peak at the square) |
 | `lbm_mrt_validation` | LBM-MRT D2Q9 independent solver | Ghia-validated; injection of PINN controls; branch admissibility (Fourier quasi-static, Chebyshev fluctuation-dominated) — campaign running |
 
 ### Parametrization matrix — f(2,0) in the common Fourier projection (seed 42, E\*=0.25, 6×5)

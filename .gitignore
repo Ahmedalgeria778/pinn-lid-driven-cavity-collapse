@@ -52,3 +52,4 @@ venv/
 # ── Optional: model weights (uncomment to track) ───────────
 # results_reviewers/**/model.pt
 # results_reviewers/**/*.xlsx
+manuscript_3geometries/
