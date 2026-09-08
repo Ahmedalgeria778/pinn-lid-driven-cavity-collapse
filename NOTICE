@@ -1,0 +1,38 @@
+PINN-ULTRa: Physics-informed identification and independent numerical
+verification of conditional modal collapse in active control of
+lid-driven cavity flow
+=============================================================
+
+Copyright 2026 Ahmed Beniaiche
+Laboratory of Fluid Mechanics, Ecole Militaire Polytechnique,
+Algiers, Algeria
+
+This software (PINN_ULTRa, "the Work") and its reproducibility material are
+provided under the Apache License, Version 2.0 (see LICENSE).
+
+Requested attribution (see Section 4(d) and Section 6 of the License):
+
+  Any publication, thesis, report, presentation, or derivative software
+  that uses, adapts, copies, or redistributes this code, its outputs, or its
+  figures shall acknowledge its author and shall cite the accompanying
+  manuscript:
+
+    Ahmed Beniaiche, "Physics-informed identification and independent
+    numerical verification of conditional modal collapse in active control
+    of lid-driven cavity flow", Physics of Fluids (submitted, 2026).
+
+  Suggested BibTeX:
+
+    @article{beniaiche2026pinn,
+      author  = {Beniaiche, Ahmed},
+      title   = {Physics-informed identification and independent numerical
+                 verification of conditional modal collapse in active
+                 control of lid-driven cavity flow},
+      journal = {Physics of Fluids},
+      year    = {2026}
+    }
+
+This NOTICE file is distributed as part of the Work under Apache License,
+Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0). Copies of this
+NOTICE must be retained in the Source form of any derivative work
+distributed in accordance with the License.

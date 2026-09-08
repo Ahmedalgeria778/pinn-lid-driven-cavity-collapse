@@ -126,9 +126,41 @@ Indicative run times (CPU, 5 threads): baseline 6×5 ≈ 1 h; `architecture` lar
 
 ## 6. License
 
-Not defined — to be chosen by the author before publication.
+This software is distributed under the **Apache License, Version 2.0**.
+See [LICENSE](LICENSE) for the full text and [NOTICE](NOTICE) for the
+required attribution statement.
 
-## 7. Statements for the manuscript
+Copyright 2026 Ahmed Beniaiche, Laboratory of Fluid Mechanics,
+Ecole Militaire Polytechnique, Algiers, Algeria.
+
+## 7. Citation
+
+Any publication, thesis, report, presentation, or derivative work that
+uses, adapts, or redistributes this code, its outputs, or its figures
+**must** cite:
+
+> Ahmed Beniaiche,
+> *"Physics-informed identification and independent numerical verification
+> of conditional modal collapse in active control of lid-driven cavity
+> flow"*, **Physics of Fluids** (2026).
+
+**BibTeX**
+
+```bibtex
+@article{beniaiche2026pinn,
+  author  = {Beniaiche, Ahmed},
+  title   = {Physics-informed identification and independent numerical verification
+             of conditional modal collapse in active control of lid-driven cavity
+             flow},
+  journal = {Physics of Fluids},
+  year    = {2026}
+}
+```
+
+A `CITATION.cff` file is included so that GitHub displays a **Cite this
+repository** button automatically.
+
+## 8. Statements for the manuscript
 
 1. The historical code (`historical_baseline/`) has **never been modified**.
 2. No external NS solver is used for the loss (direct autodiff); the Ghia benchmark and the independent optimization (LBM) are handled separately.

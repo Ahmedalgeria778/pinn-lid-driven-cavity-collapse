@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+title: "PINN-ULTRa: Modal control of the lid-driven cavity"
+message: >-
+  If you use this software in any publication, thesis, presentation,
+  report, or derivative work, please cite the code and the manuscript
+  listed under preferred-citation.
+authors:
+  - family-names: Beniaiche
+    given-names: Ahmed
+    affiliation: >-
+      Laboratory of Fluid Mechanics,
+      Ecole Militaire Polytechnique, Algiers, Algeria
+license: Apache-2.0
+repository-code: https://github.com/Ahmedalgeria778/pinn-lid-driven-cavity-collapse
+version: "1.0"
+date-released: "2026-09-07"
+keywords:
+  - PINN
+  - active flow control
+  - lid-driven cavity
+  - Fourier control
+  - modal collapse
+  - dissipation reduction
+preferred-citation:
+  type: article
+  title: >-
+    Physics-informed identification and independent numerical verification
+    of conditional modal collapse in active control of lid-driven cavity
+    flow
+  authors:
+    - family-names: Beniaiche
+      given-names: Ahmed
+  journal: Physics of Fluids
+  year: 2026
