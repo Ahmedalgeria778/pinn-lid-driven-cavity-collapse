@@ -1,0 +1,23 @@
+paper,group,Re,control,grid,iteration_final_old,residual_final_old,converged_old,reported_in_paper1,action,notes
+POF1,stationary,100,uniform,256,148000,9.685565680647018061e-10,yes,Table tab:dissipation Re100,keep,already < 1e-9
+POF1,stationary,100,sin_pi,256,148000,7.729967967801121276e-10,yes,Table tab:dissipation Re100,keep,already < 1e-9
+POF1,stationary,100,sin_2pi,256,86000,4.874830730056123329e-10,yes,Table tab:dissipation Re100,keep,already < 1e-9
+POF1,stationary,100,pinn,256,126000,8.218032184121627781e-10,yes,Table tab:dissipation Re100 (PINN mean),keep,already < 1e-9
+POF1,stationary,500,uniform,256,200000,8.182966204344638284e-07,no,Table tab:dissipation Re500,relaunch,cap reached
+POF1,stationary,500,sin_pi,256,200000,1.929590815723941644e-06,no,Table tab:dissipation Re500,relaunch,cap reached
+POF1,stationary,500,sin_2pi,256,200000,6.637488004970076849e-09,no,Table tab:dissipation Re500 AND GCI eps_256,relaunch,cap reached
+POF1,stationary,500,pinn,256,200000,3.312221415529318188e-06,no,Table tab:dissipation Re500 (PINN mean),relaunch,cap reached
+POF1,stationary,500,sin_2pi,128,132000,6.402786378346958518e-10,yes,GCI eps_128,keep,already < 1e-9
+POF1,stationary,500,sin_2pi,512,200000,2.666274122660461376e-06,no,GCI eps_512,relaunch,cap reached
+POF1,stationary,1000,uniform,256,200000,4.735101441836336855e-06,no,Table tab:dissipation Re1000,relaunch,cap reached
+POF1,stationary,1000,sin_pi,256,200000,1.235745219961212338e-05,no,Table tab:dissipation Re1000,relaunch,cap reached
+POF1,stationary,1000,sin_2pi,256,200000,3.363111632575729870e-07,no,Table tab:dissipation Re1000,relaunch,cap reached
+POF1,stationary,1000,pinn,256,200000,5.166542354152552866e-06,no,Table tab:dissipation Re1000 (PINN mean),relaunch,cap reached
+POF1,temporal,100,pinn_t,256,158000,5.952714061691760650e-10,yes,Table tab:admis Fourier Re100,keep,lock-in periodic criterion
+POF1,temporal,100,cheb_t,256,132000,6.808360433047631888e-10,yes,Table tab:admis Chebyshev Re100,keep,lock-in periodic criterion
+POF1,temporal,500,pinn_t,256,200000,3.620099389608832713e-05,no,Table tab:admis Fourier Re500,keep,lock-in periodic criterion (not stationary residual)
+POF1,temporal,500,cheb_t,256,200000,3.970413776380784642e-06,no,Table tab:admis Chebyshev Re500,keep,lock-in periodic criterion (not stationary residual)
+POF1,temporal,1000,pinn_t,256,200000,9.689815941264865590e-06,no,Table tab:admis Fourier Re1000,keep,lock-in periodic criterion (not stationary residual)
+POF1,temporal,1000,cheb_t,256,200000,1.995075736012987553e-05,no,Table tab:admis Chebyshev Re1000,keep,lock-in periodic criterion (not stationary residual)
+POF1,ghia,100,uniform,256,148000,9.685565680647018061e-10,yes,Ghia validation Re100,keep,already < 1e-9
+POF1,ghia,1000,uniform,256,794000,9.637228532560770944e-10,yes,Ghia validation Re1000,keep,relaunched via resume_ghia_re1000.py

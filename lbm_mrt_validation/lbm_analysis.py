@@ -151,13 +151,16 @@ def main():
     if a2_flow:
         ax.plot(list(a2_flow.keys()), list(a2_flow.values()), "ko-", lw=2.4, ms=9,
                 label="$A_2$ measured (LBM, mean)")
-    # aspect ratio (1:1 vs 2:1) A2 measured by the PINN
+    # aspect ratio (0.5, 1, and 2) A2 measured by the PINN
     ar_csv = os.path.join(ROOT, "results_reviewers", "09_aspect_ratio", "aspect_ratio_results.csv")
     ar_vals = []
     if os.path.exists(ar_csv):
         for row in load_csv(ar_csv):
             ar_vals.append(float(row["A20"]))
-    if ar_vals:
+    if len(ar_vals) == 3:
+        ax.scatter([500, 400, 300], ar_vals, s=120, marker="*", facecolor="white", edgecolor="k",
+                   linewidths=1.2, label="Aspect ratio 2 / 1 / 0.5 (PINN)")
+    elif ar_vals:
         ax.scatter([400, 420], ar_vals, s=120, marker="*", facecolor="white", edgecolor="k",
                    linewidths=1.2, label="Aspect ratio 1:1 / 2:1 (PINN)")
     ax.set_yscale("log")

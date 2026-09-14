@@ -15,6 +15,10 @@ Beniaiche et al. (2026) – PINN optimal control validation
 """
 
 import numpy as np
+
+# np.trapz -> np.trapezoid (numpy>=2 predefini dans numpy 2.5)
+if not hasattr(np, "trapz"):
+    np.trapz = np.trapezoid
 import matplotlib
 
 matplotlib.use('Agg')
@@ -26,6 +30,7 @@ import os
 import sys
 import warnings
 import csv
+from collections import deque
 
 warnings.filterwarnings('ignore')
 
@@ -167,6 +172,7 @@ class LBM_MRT_Solver:
         self.lid_profile = lid_profile
         self.max_iter = max_iter
         self.tol = tol
+        self.f_init = None
 
         # Vitesse de référence fixe pour incompressibilité (Ma ~ 0.087)
         self.U_ref = 0.05
@@ -219,7 +225,7 @@ class LBM_MRT_Solver:
 
     def run(self, verbose=True, logfile=None):
         N = self.N
-        f = self.f.copy()
+        f = self.f.copy() if self.f_init is None else self.f_init.copy()
         S_diag = self.S_diag
         period = self.period
         t0 = time.time()
@@ -237,6 +243,23 @@ class LBM_MRT_Solver:
         m_count = 0
         probe_ring = np.zeros(period)                       # fluct. sonde pour périodicité
         period_ok = 0
+
+        # Séries temporelles par-CYCLE (tout échantillonnage après settle_at).
+        # Pour chaque cycle forcé complet on stocke les moyennes de cycle
+        # ε_q, K_q, K_fluct_q et les champs moyens du cycle (ring des derniers
+        # N_TAIL cycles) afin de pouvoir reconstruire des fenêtres statistiques
+        # (lock-in + stabilité de fenêtres) sans relancer la simulation.
+        self.cyc_eps = []
+        self.cyc_K = []
+        self.cyc_Kf = []
+        self.cyc_Rk = []
+        self.cyc_tail = deque()          # (ux_mean, uy_mean, ux2_mean, uy2_mean, cnt)
+        N_TAIL = 32
+        c_sum_ux = np.zeros((N, N))
+        c_sum_uy = np.zeros((N, N))
+        c2_sum_ux = np.zeros((N, N))
+        c2_sum_uy = np.zeros((N, N))
+        c_count = 0
 
         # Série temporelle de la sonde centrale (échantillonnée à chaque pas après settle).
         # Serve de signature de verrouillage : la réponse se cale sur f_forcée = 1/période.
@@ -264,6 +287,37 @@ class LBM_MRT_Solver:
                 if period > 1:
                     phk = (t_idx * n_phase) // period
                     ph_sum_ux[phk] += ux; ph_sum_uy[phk] += uy; ph_cnt[phk] += 1
+                c_sum_ux += ux; c_sum_uy += uy
+                c2_sum_ux += ux * ux; c2_sum_uy += uy * uy
+                c_count += 1
+                if c_count >= period:
+                    cux = c_sum_ux / c_count
+                    cuy = c_sum_uy / c_count
+                    cux2 = c2_sum_ux / c_count
+                    cuy2 = c2_sum_uy / c_count
+                    self.cyc_tail.append((cux, cuy, cux2, cuy2, c_count))
+                    while len(self.cyc_tail) > N_TAIL:
+                        self.cyc_tail.popleft()
+                    dx = 1.0 / (N - 1)
+                    nu_c = 1.0 / self.Re
+                    dUdx = np.gradient(cux, dx, axis=1)
+                    dUdy = np.gradient(cux, dx, axis=0)
+                    dVdx = np.gradient(cuy, dx, axis=1)
+                    dVdy = np.gradient(cuy, dx, axis=0)
+                    S11, S22, S12 = dUdx, dVdy, 0.5 * (dUdy + dVdx)
+                    phi_c = nu_c * (2 * S11 ** 2 + 2 * S22 ** 2 + 4 * S12 ** 2)
+                    Kc = 0.5 * (cux * cux + cuy * cuy)
+                    Kf_c = 0.5 * ((cux2 - cux * cux) + (cuy2 - cuy * cuy))
+                    self.cyc_eps.append(np.trapz(np.trapz(phi_c, dx=dx, axis=1), dx=dx))
+                    self.cyc_K.append(np.trapz(np.trapz(Kc, dx=dx, axis=1), dx=dx))
+                    self.cyc_Kf.append(np.trapz(np.trapz(Kf_c, dx=dx, axis=1), dx=dx))
+                    if self.cyc_K[-1] > 0:
+                        self.cyc_Rk.append(self.cyc_Kf[-1] / self.cyc_K[-1])
+                    else:
+                        self.cyc_Rk.append(np.nan)
+                    c_sum_ux[:] = 0; c_sum_uy[:] = 0
+                    c2_sum_ux[:] = 0; c2_sum_uy[:] = 0
+                    c_count = 0
 
             if it % 2000 == 0:
                 if period == 1:
@@ -298,6 +352,8 @@ class LBM_MRT_Solver:
             mean_ux, mean_uy, fluct_ux, fluct_uy, mean_rho = ux, uy, np.zeros_like(ux), np.zeros_like(uy), rho
 
         self.last_residual = err if 'err' in locals() else float('inf')
+
+        self.f_final = f.copy()
 
         self.ux = mean_ux / self.U_ref
         self.uy = mean_uy / self.U_ref

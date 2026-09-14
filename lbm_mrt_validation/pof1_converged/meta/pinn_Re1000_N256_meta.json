@@ -1,0 +1,17 @@
+{
+  "paper": "POF1",
+  "case": "pinn",
+  "Re": 1000,
+  "Nx": 256,
+  "Ny": 256,
+  "tol": 1e-09,
+  "max_iter": 5000000,
+  "converged": true,
+  "iteration_final": 878000,
+  "residual_final": 9.487288300347e-10,
+  "eps": 0.005246341886261465,
+  "K": 0.008487530494214615,
+  "Z": 5.284064978221255,
+  "fields_file": "pinn_Re1000_N256.npz",
+  "logfile": "convergence_pinn_Re1000_N256_POF1.log"
+}

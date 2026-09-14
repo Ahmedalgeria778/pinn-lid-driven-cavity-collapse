@@ -1,0 +1,17 @@
+{
+  "paper": "POF1",
+  "case": "sin_2pi",
+  "Re": 1000,
+  "Nx": 256,
+  "Ny": 256,
+  "tol": 1e-09,
+  "max_iter": 5000000,
+  "converged": true,
+  "iteration_final": 312000,
+  "residual_final": 9.167182360436676e-10,
+  "eps": 0.004727968768331889,
+  "K": 0.007420257953127018,
+  "Z": 4.759312562149278,
+  "fields_file": "sin_2pi_Re1000_N256.npz",
+  "logfile": "convergence_sin_2pi_Re1000_N256_POF1.log"
+}

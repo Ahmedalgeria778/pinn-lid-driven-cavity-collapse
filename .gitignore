@@ -7,6 +7,7 @@ __pycache__/
 logs/
 *.pid
 *.log
+*.err
 
 # ── LaTeX build artifacts ───────────────────────────────────
 manuscript/*.aux
@@ -34,7 +35,9 @@ manuscript/Submission_Marked_Up_Manuscript.pdf
 
 # ── LBM: champs bruts régénérables (figures/analyse relancables) ──
 lbm_mrt_validation/fields/
+lbm_mrt_validation/fields_pre_pof1_bak/
 lbm_mrt_validation/gci_progress.csv
+lbm_mrt_validation/lid_series_paper2/
 lbm_mrt_validation/results_*.csv
 lbm_mrt_validation/validation_*.csv
 lbm_mrt_validation/lbm_*.csv

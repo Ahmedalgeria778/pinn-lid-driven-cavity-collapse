@@ -1,0 +1,17 @@
+{
+  "paper": "POF1",
+  "case": "uniform",
+  "Re": 500,
+  "Nx": 256,
+  "Ny": 256,
+  "tol": 1e-09,
+  "max_iter": 5000000,
+  "converged": true,
+  "iteration_final": 374000,
+  "residual_final": 8.983489681313461e-10,
+  "eps": 0.04428244611548395,
+  "K": 0.04052135283198689,
+  "Z": 22.810527544914496,
+  "fields_file": "uniform_Re500_N256.npz",
+  "logfile": "convergence_uniform_Re500_N256_POF1.log"
+}
