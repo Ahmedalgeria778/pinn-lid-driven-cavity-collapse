@@ -126,7 +126,9 @@ Indicative run times (CPU, 5 threads): baseline 6×5 ≈ 1 h; `architecture` lar
 
 ## 6. License
 
-Copyright 2026 Ahmed Beniaiche, Laboratory of Fluid Mechanics,
+This work is under pubs.aip.org/aip/Copyright 2026 : 
+
+Ahmed Beniaiche, Laboratory of Fluid Mechanics,
 Ecole Militaire Polytechnique, Algiers, Algeria.
 
 The Software is provided solely for non-commercial research, educational, academic, and personal purposes.
@@ -140,10 +142,8 @@ Any publication, thesis, report, presentation, or derivative work that
 uses, adapts, or redistributes this code, its outputs, or its figures
 **must** cite:
 
-> Ahmed Beniaiche,
-> *"Physics-informed identification and independent numerical verification
-> of conditional modal collapse in active control of lid-driven cavity
-> flow"*, **Physics of Fluids** (2026).
+Citation
+Ahmed Beniaiche; Physics-informed identification and independent numerical verification of conditional modal collapse in active control of lid-driven cavity flow. Physics of Fluids 1 October 2026; 38 (10): 103612. https://doi.org/10.1063/5.0351347
 
 **BibTeX**
 
