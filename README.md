@@ -148,14 +148,20 @@ Ahmed Beniaiche; Physics-informed identification and independent numerical verif
 **BibTeX**
 
 ```bibtex
-@article{beniaiche2026pinn,
-  author  = {Beniaiche, Ahmed},
-  title   = {Physics-informed identification and independent numerical verification
-             of conditional modal collapse in active control of lid-driven cavity
-             flow},
-  journal = {Physics of Fluids},
-  year    = {2026}
-}
+@article{10.1063/5.0351347,
+    author = {Beniaiche, Ahmed},
+    title = {Physics-informed identification and independent numerical verification of conditional modal collapse in active control of lid-driven cavity flow},
+    journal = {Physics of Fluids},
+    volume = {38},
+    number = {10},
+    pages = {103612},
+    year = {2026},
+    month = {10},
+    abstract = {Physics-informed neural networks identify distributed actuation for a two-dimensional lid-driven cavity by combining the Navier–Stokes constraints with an objective reducing viscous dissipation at prescribed actuation energy. The control is represented in a truncated spatiotemporal Fourier basis, while a parametric network represents the Reynolds-number dependence over  100≤Re≤1000. At  Re=100 and 500, the control concentrates in the stationary second spatial harmonic ( 91.6\% and  92.2\% of the energy), the time-dependent contribution below  1.3\%. At  Re=1000, the second harmonic remains the largest contribution ( 64.0\%), the temporal fraction rising to  32.2\%. The branch persists across actuation energy, network capacity, Fourier truncation, and cavity aspect ratio  AR=Lx/Ly, but its purity is geometry-dependent: it remains above  91\% for  AR=1 and 2, whereas it falls to  69.9\% at  AR=0.5, where the temporal fraction reaches  26.7\%. Branches are not unique: independent initializations at  Re=500 produce distinct converged branches with comparable objectives, and removing the variance regularization redirects the solution toward a first-harmonic branch. The structure is also conditional on the control representation: a modified-Chebyshev basis produces a temporally dominated branch. Controls are transferred without retraining to an independent multiple-relaxation-time lattice-Boltzmann solver. The Fourier branch is reproduced as a low-dissipation, quasi-stationary flow, with a fluctuating-to-mean-flow kinetic-energy ratio  RK\&lt;1\% at all three Reynolds numbers, whereas the modified-Chebyshev branch fails this criterion. The second-mode-dominated solution is thus a repeatedly recoverable, parameterization- and regime-dependent branch, and systematic branch analysis with independent numerical verification is essential when interpreting control structures from physics-informed optimization.},
+    issn = {1070-6631},
+    doi = {10.1063/5.0351347},
+    url = {https://doi.org/10.1063/5.0351347},
+    eprint = {https://pubs.aip.org/aip/pof/article-pdf/doi/10.1063/5.0351347/21174314/103612_1_5.0351347.pdf},
 ```
 
 A `CITATION.cff` file is included so that GitHub displays a **Cite this
